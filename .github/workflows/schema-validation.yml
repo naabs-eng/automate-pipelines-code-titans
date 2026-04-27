@@ -1,0 +1,83 @@
+name: Config Schema Validation
+
+on:
+  pull_request:
+    branches: ["**"]
+    paths:
+      - "config.yaml"
+      - "src/**"
+
+jobs:
+  validate-config:
+    name: Validate config.yaml completeness
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install pyyaml
+        run: pip install pyyaml
+
+      - name: Validate config.yaml structure
+        run: |
+          python - <<'EOF'
+          import yaml
+          import sys
+
+          with open("config.yaml", "r") as f:
+              config = yaml.safe_load(f)
+
+          errors = []
+
+          # Required top-level sections
+          required_sections = ["sql_server", "spark", "pipeline", "paths", "tables"]
+          for section in required_sections:
+              if section not in config:
+                  errors.append(f"Missing required section: '{section}'")
+
+          # sql_server sub-keys
+          sql = config.get("sql_server", {})
+          for key in ["driver", "server", "database"]:
+              if not sql.get(key):
+                  errors.append(f"Missing or empty: sql_server.{key}")
+
+          # spark sub-keys
+          spark = config.get("spark", {})
+          for key in ["app_name", "master", "memory"]:
+              if not spark.get(key):
+                  errors.append(f"Missing or empty: spark.{key}")
+
+          # paths sub-keys
+          paths = config.get("paths", {})
+          for key in ["bronze", "silver", "gold", "logs"]:
+              if not paths.get(key):
+                  errors.append(f"Missing or empty: paths.{key}")
+
+          # tables.source must be a non-empty list
+          tables = config.get("tables", {})
+          source = tables.get("source")
+          if not source or not isinstance(source, list) or len(source) == 0:
+              errors.append("tables.source must be a non-empty list")
+          else:
+              for i, entry in enumerate(source):
+                  if not isinstance(entry, dict):
+                      errors.append(f"tables.source[{i}] must be a dict")
+                  else:
+                      for key in ["name", "bronze_table"]:
+                          if not entry.get(key):
+                              errors.append(f"tables.source[{i}] missing required key: '{key}'")
+
+          if errors:
+              print("config.yaml validation FAILED:")
+              for error in errors:
+                  print(f"  ERROR: {error}")
+              sys.exit(1)
+          else:
+              print(f"config.yaml validation PASSED ({len(source)} source tables configured)")
+          EOF

@@ -1,0 +1,84 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python src/main.py)",
+      "Bash(python src/main.py *)",
+      "Bash(python -c *)",
+      "Bash(python -m pytest *)",
+      "Bash(python -m py_compile *)",
+      "Bash(pytest *)",
+      "Bash(pip install -r requirements.txt)",
+      "Bash(pip install *)",
+      "Bash(ls *)",
+      "Bash(ls)",
+      "Bash(find . *)",
+      "Bash(cat *)",
+      "Bash(head *)",
+      "Bash(tail *)",
+      "Bash(mkdir -p *)",
+      "Bash(git status)",
+      "Bash(git diff *)",
+      "Bash(git log *)",
+      "Bash(git branch *)",
+      "Bash(git checkout *)",
+      "Bash(git pull *)",
+      "Bash(git add src/*)",
+      "Bash(git add tests/*)",
+      "Bash(git add config.yaml)",
+      "Bash(git add requirements.txt)",
+      "Bash(git add CLAUDE.md)",
+      "Bash(git add .claude/*)",
+      "Bash(git add sql/*)",
+      "Bash(git add .github/*)",
+      "Bash(git add .gitignore)",
+      "Bash(git commit *)",
+      "Bash(git push origin *)",
+      "Bash(sqlcmd *)"
+    ],
+    "deny": [
+      "Bash(rm -rf *)",
+      "Bash(git push --force *)",
+      "Bash(git reset --hard *)",
+      "Bash(git push -f *)",
+      "Bash(DROP DATABASE *)",
+      "Bash(DROP TABLE *)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python .claude/hooks/pre_bash_guard.py",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python .claude/hooks/post_bash_logger.py",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python .claude/hooks/session_summary.py",
+            "timeout": 15
+          }
+        ]
+      }
+    ]
+  }
+}

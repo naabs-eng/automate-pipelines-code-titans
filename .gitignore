@@ -1,0 +1,41 @@
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+ENV/
+
+# Pipeline output — regenerated on each run
+data/bronze/*
+data/silver/*
+data/gold/*
+
+# Logs
+logs/*
+!logs/.gitkeep
+
+# Credentials — never commit
+.env
+
+# Claude Code — personal local settings only
+.claude/settings.local.json
+
+# JDBC driver binaries
+drivers/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Python bytecode
+*.log
+*.pyc
+
+# Coverage
+coverage.xml
+.coverage
+htmlcov/

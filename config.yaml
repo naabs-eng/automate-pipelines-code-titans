@@ -1,0 +1,32 @@
+sql_server:
+  driver: "ODBC Driver 17 for SQL Server"
+  server: "localhost"
+  database: "SalesDB"
+  trusted_connection: "yes"
+
+spark:
+  app_name: "SalesDataPipeline"
+  master: "local[*]"
+  memory: "4g"
+  executor_memory: "2g"
+
+pipeline:
+  frequency: "daily"
+  data_format: "parquet"
+
+paths:
+  bronze: "./data/bronze"
+  silver: "./data/silver"
+  gold: "./data/gold"
+  logs: "./logs"
+
+tables:
+  source:
+    - name: "dbo.Products"
+      bronze_table: "products"
+    - name: "dbo.Customers"
+      bronze_table: "customers"
+    - name: "dbo.Orders"
+      bronze_table: "orders"
+    - name: "dbo.OrderItems"
+      bronze_table: "order_items"
