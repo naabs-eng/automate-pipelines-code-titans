@@ -12,6 +12,7 @@ spark:
 pipeline:
   frequency: "daily"
   data_format: "parquet"
+  # test: trigger schema-validation workflow via PR
 
 paths:
   bronze: "./data/bronze"
