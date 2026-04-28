@@ -13,20 +13,22 @@ from bronze.ingestion import BronzeLayer
 from silver.transformations import SilverLayer
 from gold.aggregations import GoldLayer
 
+
 def main():
     config = ConfigManager()
-    logger_manager = PipelineLogger(config.get('paths.logs', './logs'))
+    logger_manager = PipelineLogger(config.get("paths.logs", "./logs"))
     logger = logger_manager.get_logger("DataPipeline")
 
-    jdbc_driver = str(Path(__file__).parent.parent / config.get('spark.jdbc_driver_path'))
+    jdbc_driver = str(Path(__file__).parent.parent / config.get("spark.jdbc_driver_path"))
 
-    spark = SparkSession.builder \
-        .appName(config.get('spark.app_name')) \
-        .master(config.get('spark.master')) \
-        .config("spark.driver.memory", config.get('spark.memory')) \
-        .config("spark.executor.memory", config.get('spark.executor_memory')) \
-        .config("spark.jars", jdbc_driver) \
+    spark = (
+        SparkSession.builder.appName(config.get("spark.app_name"))
+        .master(config.get("spark.master"))
+        .config("spark.driver.memory", config.get("spark.memory"))
+        .config("spark.executor.memory", config.get("spark.executor_memory"))
+        .config("spark.jars", jdbc_driver)
         .getOrCreate()
+    )
 
     logger.info("Starting data pipeline...")
 
@@ -42,22 +44,22 @@ def main():
 
         bronze.ingest_all_tables()
 
-        bronze_products = spark.read.parquet(str(Path(config.get('paths.bronze')) / "products"))
+        bronze_products = spark.read.parquet(str(Path(config.get("paths.bronze")) / "products"))
         silver_products = silver.transform_products(bronze_products)
         if silver_products:
             silver.save_silver_table(silver_products, "products")
 
-        bronze_customers = spark.read.parquet(str(Path(config.get('paths.bronze')) / "customers"))
+        bronze_customers = spark.read.parquet(str(Path(config.get("paths.bronze")) / "customers"))
         silver_customers = silver.transform_customers(bronze_customers)
         if silver_customers:
             silver.save_silver_table(silver_customers, "customers")
 
-        bronze_orders = spark.read.parquet(str(Path(config.get('paths.bronze')) / "orders"))
+        bronze_orders = spark.read.parquet(str(Path(config.get("paths.bronze")) / "orders"))
         silver_orders = silver.transform_orders(bronze_orders)
         if silver_orders:
             silver.save_silver_table(silver_orders, "orders")
 
-        bronze_order_items = spark.read.parquet(str(Path(config.get('paths.bronze')) / "order_items"))
+        bronze_order_items = spark.read.parquet(str(Path(config.get("paths.bronze")) / "order_items"))
         silver_order_items = silver.transform_order_items(bronze_order_items)
         if silver_order_items:
             silver.save_silver_table(silver_order_items, "order_items")
@@ -82,6 +84,7 @@ def main():
 
     finally:
         spark.stop()
+
 
 if __name__ == "__main__":
     main()

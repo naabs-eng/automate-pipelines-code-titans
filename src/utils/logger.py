@@ -2,6 +2,7 @@ import logging
 from pathlib import Path
 from datetime import datetime
 
+
 class PipelineLogger:
     def __init__(self, log_dir="./logs"):
         self.log_dir = Path(log_dir)
@@ -10,9 +11,7 @@ class PipelineLogger:
     def get_logger(self, name):
         logger = logging.getLogger(name)
         if not logger.handlers:
-            formatter = logging.Formatter(
-                '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-            )
+            formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 
             log_file = self.log_dir / f"pipeline_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
 
