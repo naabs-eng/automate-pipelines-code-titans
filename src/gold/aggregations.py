@@ -15,8 +15,11 @@ class GoldLayer:
         try:
             self.logger.info("Creating sales summary...")
 
+            order_items_aliased = order_items_df.alias("oi")
+            products_aliased = products_df.alias("p")
+
             df = (
-                order_items_df.join(products_df, "product_id", "left")
+                order_items_aliased.join(products_aliased, "product_id", "left")
                 .join(orders_df, "order_id", "left")
                 .select(
                     F.col("order_date"),
@@ -24,7 +27,7 @@ class GoldLayer:
                     F.col("product_name"),
                     F.col("category"),
                     F.col("quantity"),
-                    F.col("unit_price"),
+                    F.col("oi.unit_price").alias("unit_price"),
                     F.col("line_total"),
                 )
             )
