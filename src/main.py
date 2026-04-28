@@ -1,6 +1,9 @@
 from pyspark.sql import SparkSession
 import sys
 from pathlib import Path
+from dotenv import load_dotenv
+
+load_dotenv()
 
 sys.path.insert(0, str(Path(__file__).parent))
 
@@ -15,11 +18,14 @@ def main():
     logger_manager = PipelineLogger(config.get('paths.logs', './logs'))
     logger = logger_manager.get_logger("DataPipeline")
 
+    jdbc_driver = str(Path(__file__).parent.parent / config.get('spark.jdbc_driver_path'))
+
     spark = SparkSession.builder \
         .appName(config.get('spark.app_name')) \
         .master(config.get('spark.master')) \
         .config("spark.driver.memory", config.get('spark.memory')) \
         .config("spark.executor.memory", config.get('spark.executor_memory')) \
+        .config("spark.jars", jdbc_driver) \
         .getOrCreate()
 
     logger.info("Starting data pipeline...")
@@ -60,13 +66,13 @@ def main():
         if sales_summary:
             gold.save_gold_table(sales_summary, "sales_summary")
 
-        daily_sales = gold.create_daily_sales_by_category(sales_summary)
-        if daily_sales:
-            gold.save_gold_table(daily_sales, "daily_sales_by_category")
+            daily_sales = gold.create_daily_sales_by_category(sales_summary)
+            if daily_sales:
+                gold.save_gold_table(daily_sales, "daily_sales_by_category")
 
-        product_perf = gold.create_product_performance(sales_summary)
-        if product_perf:
-            gold.save_gold_table(product_perf, "product_performance")
+            product_perf = gold.create_product_performance(sales_summary)
+            if product_perf:
+                gold.save_gold_table(product_perf, "product_performance")
 
         logger.info("Data pipeline completed successfully!")
 

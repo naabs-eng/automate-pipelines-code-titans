@@ -1,5 +1,4 @@
-from pyspark.sql import SparkSession
-import pyodbc
+import os
 from pathlib import Path
 
 class BronzeLayer:
@@ -14,14 +13,18 @@ class BronzeLayer:
         try:
             self.logger.info(f"Ingesting {table_name} from SQL Server...")
 
-            connection_string = self.config.get_sql_server_connection_string()
+            jdbc_url = (
+                f"jdbc:sqlserver://{self.config.get('sql_server.server')};"
+                f"databaseName={self.config.get('sql_server.database')};"
+                f"encrypt=false;trustServerCertificate=true"
+            )
 
             df = self.spark.read \
                 .format("jdbc") \
-                .option("url", f"jdbc:sqlserver://{self.config.get('sql_server.server')};databaseName={self.config.get('sql_server.database')}") \
+                .option("url", jdbc_url) \
                 .option("dbtable", table_name) \
-                .option("user", "") \
-                .option("password", "") \
+                .option("user", os.environ.get('SA_USERNAME', '')) \
+                .option("password", os.environ.get('SA_PASSWORD', '')) \
                 .option("driver", "com.microsoft.sqlserver.jdbc.SQLServerDriver") \
                 .load()
 

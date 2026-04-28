@@ -43,7 +43,7 @@ jobs:
 
           # sql_server sub-keys
           sql = config.get("sql_server", {})
-          for key in ["driver", "server", "database"]:
+          for key in ["server", "database"]:
               if not sql.get(key):
                   errors.append(f"Missing or empty: sql_server.{key}")
 
