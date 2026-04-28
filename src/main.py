@@ -1,18 +1,18 @@
 import sys
 from pathlib import Path
 
-from dotenv import load_dotenv
-from pyspark.sql import SparkSession
+sys.path.insert(0, str(Path(__file__).parent))
+
+from dotenv import load_dotenv  # noqa: E402
+from pyspark.sql import SparkSession  # noqa: E402
 
 load_dotenv()
 
-sys.path.insert(0, str(Path(__file__).parent))
-
-from bronze.ingestion import BronzeLayer
-from config.config_manager import ConfigManager
-from gold.aggregations import GoldLayer
-from silver.transformations import SilverLayer
-from utils.logger import PipelineLogger
+from bronze.ingestion import BronzeLayer  # noqa: E402
+from config.config_manager import ConfigManager  # noqa: E402
+from gold.aggregations import GoldLayer  # noqa: E402
+from silver.transformations import SilverLayer  # noqa: E402
+from utils.logger import PipelineLogger  # noqa: E402
 
 
 def main():
