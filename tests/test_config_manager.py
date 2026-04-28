@@ -1,4 +1,5 @@
 import pytest
+
 from src.config.config_manager import ConfigManager
 
 
