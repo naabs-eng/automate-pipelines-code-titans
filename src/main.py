@@ -1,3 +1,4 @@
+import os
 import sys
 from pathlib import Path
 
@@ -7,6 +8,19 @@ from dotenv import load_dotenv  # noqa: E402
 from pyspark.sql import SparkSession  # noqa: E402
 
 load_dotenv()
+
+if sys.platform == "win32":
+    java_home = r"C:\Program Files\Java\jdk-21.0.11"
+    hadoop_home = r"C:\hadoop"
+    os.environ.setdefault("JAVA_HOME", java_home)
+    os.environ.setdefault("HADOOP_HOME", hadoop_home)
+    os.environ["PATH"] = (
+        os.path.join(java_home, "bin")
+        + os.pathsep
+        + os.path.join(hadoop_home, "bin")
+        + os.pathsep
+        + os.environ.get("PATH", "")
+    )
 
 from bronze.ingestion import BronzeLayer  # noqa: E402
 from config.config_manager import ConfigManager  # noqa: E402
