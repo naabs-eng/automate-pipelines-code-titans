@@ -22,6 +22,20 @@ class ConfigManager:
                 return default
         return value if value is not None else default
 
+    def set(self, key, value):
+        keys = key.split(".")
+        d = self.config
+        for k in keys[:-1]:
+            d = d.setdefault(k, {})
+        d[keys[-1]] = value
+
+    def save(self):
+        with open(self.config_path, "w") as f:
+            yaml.dump(self.config, f, default_flow_style=False, allow_unicode=True)
+
+    def reload(self):
+        self.config = self._load_config()
+
     def get_sql_server_connection_string(self):
         sql_config = self.config["sql_server"]
         return (

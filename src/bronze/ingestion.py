@@ -43,3 +43,37 @@ class BronzeLayer:
         tables = self.config.get("tables.source", [])
         for table in tables:
             self.ingest_from_sql_server(table["name"], table["bronze_table"])
+
+    def ingest_from_postgresql(self, table_name, bronze_table_name):
+        try:
+            self.logger.info(f"Ingesting {table_name} from PostgreSQL...")
+
+            jdbc_url = (
+                f"jdbc:postgresql://{self.config.get('postgresql.host')}:"
+                f"{self.config.get('postgresql.port')}/"
+                f"{self.config.get('postgresql.database')}"
+            )
+
+            df = (
+                self.spark.read.format("jdbc")
+                .option("url", jdbc_url)
+                .option("dbtable", table_name)
+                .option("user", os.environ.get("PG_USERNAME", ""))
+                .option("password", os.environ.get("PG_PASSWORD", ""))
+                .option("driver", "org.postgresql.Driver")
+                .load()
+            )
+
+            output_path = self.bronze_path / bronze_table_name
+            df.coalesce(1).write.mode("overwrite").parquet(str(output_path))
+
+            self.logger.info(f"Successfully ingested {table_name} -> {bronze_table_name}")
+            return True
+        except Exception as e:
+            self.logger.error(f"Error ingesting {table_name} from PostgreSQL: {str(e)}")
+            return False
+
+    def ingest_all_pg_tables(self):
+        tables = self.config.get("tables.pg_source", [])
+        for table in tables:
+            self.ingest_from_postgresql(table["name"], table["bronze_table"])

@@ -24,8 +24,6 @@ if sys.platform == "win32":
 
 from bronze.ingestion import BronzeLayer  # noqa: E402
 from config.config_manager import ConfigManager  # noqa: E402
-from gold.aggregations import GoldLayer  # noqa: E402
-from silver.transformations import SilverLayer  # noqa: E402
 from utils.logger import PipelineLogger  # noqa: E402
 
 
@@ -34,14 +32,18 @@ def main():
     logger_manager = PipelineLogger(config.get("paths.logs", "./logs"))
     logger = logger_manager.get_logger("DataPipeline")
 
-    jdbc_driver = str(Path(__file__).parent.parent / config.get("spark.jdbc_driver_path"))
+    base = Path(__file__).parent.parent
+    jdbc_driver = str(base / config.get("spark.jdbc_driver_path"))
+    pg_driver = str(base / config.get("spark.pg_driver_path"))
+    all_drivers = f"{jdbc_driver}:{pg_driver}"
 
     spark = (
         SparkSession.builder.appName(config.get("spark.app_name"))
         .master(config.get("spark.master"))
         .config("spark.driver.memory", config.get("spark.memory"))
         .config("spark.executor.memory", config.get("spark.executor_memory"))
-        .config("spark.jars", jdbc_driver)
+        .config("spark.driver.extraClassPath", all_drivers)
+        .config("spark.executor.extraClassPath", all_drivers)
         .getOrCreate()
     )
 
@@ -51,47 +53,16 @@ def main():
         bronze = BronzeLayer(spark, config, logger)
         logger.info("Bronze layer initialized")
 
-        silver = SilverLayer(spark, config, logger)
-        logger.info("Silver layer initialized")
-
-        gold = GoldLayer(spark, config, logger)
-        logger.info("Gold layer initialized")
-
+        # Ingest from SQL Server
         bronze.ingest_all_tables()
 
-        bronze_products = spark.read.parquet(str(Path(config.get("paths.bronze")) / "products"))
-        silver_products = silver.transform_products(bronze_products)
-        if silver_products:
-            silver.save_silver_table(silver_products, "products")
+        # Ingest from PostgreSQL
+        bronze.ingest_all_pg_tables()
 
-        bronze_customers = spark.read.parquet(str(Path(config.get("paths.bronze")) / "customers"))
-        silver_customers = silver.transform_customers(bronze_customers)
-        if silver_customers:
-            silver.save_silver_table(silver_customers, "customers")
+        # Silver and Gold transforms are handled dynamically via the /silver-gold skill.
+        # Run: /silver-gold <table_name> [primary_key=<col>]
 
-        bronze_orders = spark.read.parquet(str(Path(config.get("paths.bronze")) / "orders"))
-        silver_orders = silver.transform_orders(bronze_orders)
-        if silver_orders:
-            silver.save_silver_table(silver_orders, "orders")
-
-        bronze_order_items = spark.read.parquet(str(Path(config.get("paths.bronze")) / "order_items"))
-        silver_order_items = silver.transform_order_items(bronze_order_items)
-        if silver_order_items:
-            silver.save_silver_table(silver_order_items, "order_items")
-
-        sales_summary = gold.create_sales_summary(silver_orders, silver_order_items, silver_products)
-        if sales_summary:
-            gold.save_gold_table(sales_summary, "sales_summary")
-
-            daily_sales = gold.create_daily_sales_by_category(sales_summary)
-            if daily_sales:
-                gold.save_gold_table(daily_sales, "daily_sales_by_category")
-
-            product_perf = gold.create_product_performance(sales_summary)
-            if product_perf:
-                gold.save_gold_table(product_perf, "product_performance")
-
-        logger.info("Data pipeline completed successfully!")
+        logger.info("Bronze ingestion completed. Run /silver-gold <table> to transform.")
 
     except Exception as e:
         logger.error(f"Pipeline failed: {str(e)}", exc_info=True)

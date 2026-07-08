@@ -1,32 +1,39 @@
-sql_server:
-  server: "localhost\\SQLEXPRESS"
-  database: "SalesDB"
-
-spark:
-  app_name: "SalesDataPipeline"
-  master: "local[*]"
-  memory: "4g"
-  executor_memory: "2g"
-  jdbc_driver_path: "drivers/mssql-jdbc-13.4.0.jre11.jar"
-
-pipeline:
-  frequency: "daily"
-  data_format: "parquet"
-  # test: trigger schema-validation workflow via PR
-
 paths:
-  bronze: "./data/bronze"
-  silver: "./data/silver"
-  gold: "./data/gold"
-  logs: "./logs"
-
+  bronze: ./data/bronze
+  gold: ./data/gold
+  logs: ./logs
+  silver: ./data/silver
+pipeline:
+  data_format: parquet
+  frequency: daily
+postgresql:
+  database: salesdb
+  host: localhost
+  port: 5432
+spark:
+  app_name: SalesDataPipeline
+  executor_memory: 2g
+  jdbc_driver_path: drivers/mssql-jdbc-13.4.0.jre11.jar
+  master: local[*]
+  memory: 4g
+  pg_driver_path: drivers/postgresql-42.7.13.jar
+sql_server:
+  database: SalesDB
+  server: localhost\SQLEXPRESS
 tables:
+  pg_source:
+  - bronze_table: suppliers
+    name: public.suppliers
+  - bronze_table: inventory
+    name: public.inventory
+  - bronze_table: shipments
+    name: public.shipments
   source:
-    - name: "dbo.Products"
-      bronze_table: "products"
-    - name: "dbo.Customers"
-      bronze_table: "customers"
-    - name: "dbo.Orders"
-      bronze_table: "orders"
-    - name: "dbo.OrderItems"
-      bronze_table: "order_items"
+  - bronze_table: products
+    name: dbo.Products
+  - bronze_table: customers
+    name: dbo.Customers
+  - bronze_table: orders
+    name: dbo.Orders
+  - bronze_table: order_items
+    name: dbo.OrderItems
