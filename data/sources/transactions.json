@@ -1,0 +1,8 @@
+/* File Source: transactions.json (Landing Zone) */
+[
+  {"transaction_id": "TXN-9901", "customer_id": 1001, "amount": 150.50, "txn_timestamp": "2026-07-11T08:00:00Z"},
+  {"transaction_id": "TXN-9902", "customer_id": 1002, "amount": 45.00, "txn_timestamp": "2026-07-11T08:15:00Z"},
+  {"transaction_id": "TXN-9903", "customer_id": 1001, "amount": 350.00, "txn_timestamp": "2026-07-11T09:30:00Z"},
+  {"transaction_id": "TXN-9904", "customer_id": 1004, "amount": 89.99, "txn_timestamp": "2026-07-11T10:00:00Z"} 
+]
+/* Note: Customer 1004 represents an edge case of a transactional event arriving prior to HR customer profile sync (unregistered) */

@@ -1,0 +1,6 @@
+/* File Source: ticket_events.json (Landing Zone) */
+{"ticket_id": "TKT-101", "agent_id": 701, "customer_id": 901, "priority": "High", "response_time_minutes": 45, "resolved": true}
+{"ticket_id": "TKT-102", "agent_id": 702, "customer_id": 902, "priority": "Critical", "response_time_minutes": 12, "resolved": true}
+{"ticket_id": "TKT-103", "agent_id": 701, "customer_id": 903, "priority": "Low", "response_time_minutes": 180, "resolved": false}
+{"ticket_id": "TKT-104", "agent_id": 799, "customer_id": 904, "priority": "High", "response_time_minutes": 30, "resolved": true}
+/* Note: Agent 799 represents an external chatbot/automated routing handler */

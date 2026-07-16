@@ -1,0 +1,7 @@
+/* File Source: leave_logs.csv (Landing Zone) */
+leave_id,employee_id,leave_type,start_date,end_date,approval_status
+L-501,8801,Annual,2026-07-15,2026-07-22,Approved
+L-502,8802,Sick,2026-07-10,2026-07-11,Approved
+L-503,8803,Annual,2026-08-01,2026-08-05,Pending
+L-504,8899,Personal,2026-07-12,2026-07-13,Approved
+/* Note: Employee 8899 represents a deleted/corrupt employee record (Referential Integrity Check) */

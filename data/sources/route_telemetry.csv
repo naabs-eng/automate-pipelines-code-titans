@@ -1,0 +1,8 @@
+/* File Source: route_telemetry.parquet (Landing Zone) */
+/* Represented as tabular row values for ease of creation */
+dispatch_id,vehicle_id,distance_miles,hours_taken,fuel_consumed_gallons,status
+DSP-4001,301,150.5,3.5,12.2,Completed
+DSP-4002,302,280.0,6.0,0.0,Completed
+DSP-4003,303,420.4,9.5,45.8,Delayed
+DSP-4004,304,95.0,2.0,8.1,Completed
+/* Note: Vehicle 304 represents an unlisted, sub-contracted vehicle */
