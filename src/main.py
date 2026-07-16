@@ -33,17 +33,15 @@ def main():
     logger = logger_manager.get_logger("DataPipeline")
 
     base = Path(__file__).parent.parent
-    jdbc_driver = str(base / config.get("spark.jdbc_driver_path"))
     pg_driver = str(base / config.get("spark.pg_driver_path"))
-    all_drivers = f"{jdbc_driver}:{pg_driver}"
 
     spark = (
         SparkSession.builder.appName(config.get("spark.app_name"))
         .master(config.get("spark.master"))
         .config("spark.driver.memory", config.get("spark.memory"))
         .config("spark.executor.memory", config.get("spark.executor_memory"))
-        .config("spark.driver.extraClassPath", all_drivers)
-        .config("spark.executor.extraClassPath", all_drivers)
+        .config("spark.driver.extraClassPath", pg_driver)
+        .config("spark.executor.extraClassPath", pg_driver)
         .getOrCreate()
     )
 
@@ -53,16 +51,7 @@ def main():
         bronze = BronzeLayer(spark, config, logger)
         logger.info("Bronze layer initialized")
 
-        # Ingest from SQL Server
-        bronze.ingest_all_tables()
-
-        # Ingest from PostgreSQL
-        bronze.ingest_all_pg_tables()
-
-        # Silver and Gold transforms are handled dynamically via the /silver-gold skill.
-        # Run: /silver-gold <table_name> [primary_key=<col>]
-
-        logger.info("Bronze ingestion completed. Run /silver-gold <table> to transform.")
+        logger.info("Bronze ingestion completed. Use run_bronze.py / run_silver_gold.py via the Streamlit UI.")
 
     except Exception as e:
         logger.error(f"Pipeline failed: {str(e)}", exc_info=True)

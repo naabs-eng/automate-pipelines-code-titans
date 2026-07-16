@@ -36,9 +36,3 @@ class ConfigManager:
     def reload(self):
         self.config = self._load_config()
 
-    def get_sql_server_connection_string(self):
-        sql_config = self.config["sql_server"]
-        return (
-            f"Driver={{{sql_config['driver']}}};Server={sql_config['server']};"
-            f"Database={sql_config['database']};Trusted_Connection={sql_config['trusted_connection']}"
-        )

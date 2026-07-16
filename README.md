@@ -1,132 +1,245 @@
-# Sales Data Pipeline - Medallion Architecture
+# ClaudeDataPipeline
 
-A Python + Apache Spark ETL pipeline using the medallion (bronze-silver-gold) architecture to process sales data from a local SQL Server.
+A Python + PySpark ETL pipeline built on the **Medallion Architecture** (Bronze → Silver → Gold), with a Streamlit UI for running pipelines, building Gold aggregations, and querying data — no code required.
 
 ## Architecture
 
-### Medallion Layers
-
-- **Bronze**: Raw data ingestion from SQL Server tables (Products, Customers, Orders, OrderItems)
-- **Silver**: Cleaned and standardized data with type casting and validation
-- **Gold**: Business-ready aggregated analytics (sales summary, daily sales by category, product performance)
-
-## Project Structure
-
 ```
-src/
-├── bronze/          # Data ingestion from source systems
-├── silver/          # Data transformation and cleaning
-├── gold/            # Business aggregations and analytics
-├── config/          # Configuration management
-└── utils/           # Logging and utility functions
-
-data/
-├── bronze/          # Raw data (Parquet format)
-├── silver/          # Transformed data
-└── gold/            # Analytics data
-
-logs/               # Pipeline execution logs
-tests/              # Test files
+PostgreSQL  ─┐
+             ├─▶  Bronze (raw Parquet)  ─▶  Silver (clean/typed)  ─▶  Gold (aggregations)
+File sources ─┘
 ```
 
-## Setup Instructions
+| Layer | What it stores | Location |
+|---|---|---|
+| Bronze | Faithful copy of source, audit columns added | `data/bronze/<table>_bronze/` |
+| Silver | Typed, snake_case, null-safe rows | `data/silver/<table>_silver/` |
+| Gold | Business aggregations for analysis | `data/gold/<metric_name>/` |
 
-### 1. Install Dependencies
+---
+
+## Prerequisites
+
+| Requirement | Version | Notes |
+|---|---|---|
+| Python | 3.9+ | 3.11 recommended |
+| Java | 11+ | Required by PySpark — [Temurin JDK](https://adoptium.net/) recommended |
+| PostgreSQL | 13+ | Source database; must be running locally |
+
+**macOS quick install:**
+```bash
+brew install openjdk@17 postgresql@15
+```
+
+**Windows:** Install [Temurin JDK 17](https://adoptium.net/) and [PostgreSQL](https://www.postgresql.org/download/windows/), then ensure `JAVA_HOME` is set in your environment.
+
+---
+
+## Setup
+
+### 1. Clone the repository
+
+```bash
+git clone <repo-url>
+cd ClaudeDataPipeline
+```
+
+### 2. Install Python dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 2. Configure SQL Server Connection
+### 3. Configure credentials
 
-Edit `config.yaml` with your SQL Server details:
+```bash
+cp .env.example .env
+```
+
+Edit `.env`:
+
+```env
+# PostgreSQL — defaults to your OS username with no password (Mac/Linux trust auth)
+PG_USERNAME=your_postgres_username
+PG_PASSWORD=your_postgres_password
+
+# Required only for the Gold Agent page (AI-powered analysis)
+ANTHROPIC_API_KEY=sk-ant-...
+```
+
+### 3a. Set login credentials (required)
+
+The app requires a username and password at startup. These are stored **outside the project directory** as system environment variables — never in `.env` or any committed file.
+
+**macOS / Linux** — add to `~/.zshrc` (or `~/.bashrc`):
+
+```bash
+export NF_USERNAME="your_username"
+export NF_PASSWORD="your_password"
+```
+
+Then reload your shell:
+
+```bash
+source ~/.zshrc
+```
+
+**Windows** — set via System Properties → Environment Variables, or in PowerShell:
+
+```powershell
+[System.Environment]::SetEnvironmentVariable("NF_USERNAME", "your_username", "User")
+[System.Environment]::SetEnvironmentVariable("NF_PASSWORD", "your_password", "User")
+```
+
+> If `NF_USERNAME` or `NF_PASSWORD` are not set, the login form will reject all credentials.
+
+### 4. Verify config.yaml
+
+Open `config.yaml` and confirm the PostgreSQL connection matches your local setup:
 
 ```yaml
-sql_server:
-  driver: "ODBC Driver 17 for SQL Server"
-  server: "localhost"
-  database: "SalesDB"
-  trusted_connection: "yes"
+postgresql:
+  host: localhost
+  port: 5432
+  database: postgres
 ```
 
-### 3. Create Sample Data in SQL Server
+Change these if your PostgreSQL runs on a different host, port, or database name.
 
-Run the SQL scripts in `sql/` directory to create tables and sample data:
+### 5. Set up your PostgreSQL source tables
 
-```sql
--- Run create_schema.sql in your SQL Server
--- This will create Products, Customers, Orders, and OrderItems tables
-```
+Create the tables your pipelines will ingest from and populate them with data. The default pipelines expect:
 
-### 4. Run the Pipeline
+- `pg_customers` — customer records
+- `pg_employees` — employee records
+
+Add your data directly in PostgreSQL using `psql` or any PostgreSQL client.
+
+### 6. Add source files (optional)
+
+Place CSV or JSON source files in `data/sources/`. The pipelines reference them by filename (e.g. `transactions.json`, `leave_logs.csv`).
+
+### 7. Run the app
 
 ```bash
-python src/main.py
+streamlit run app.py
 ```
 
-## Configuration (config.yaml)
+Open [http://localhost:8501](http://localhost:8501) in your browser.
 
-- **SQL Server**: Connection details for source database
-- **Spark**: Configuration for Spark session (master, memory, app name)
-- **Paths**: Output directories for each medallion layer
-- **Tables**: Source table mappings and bronze layer names
+---
 
-## Output
+## Using the App
 
-The pipeline generates Parquet files in:
-- `data/bronze/` - Raw ingested data
-- `data/silver/` - Cleaned and transformed data
-- `data/gold/` - Aggregated analytics tables
+### Bronze & Silver
+Run ingestion for any configured pipeline. Reads from PostgreSQL and/or file sources, writes raw Parquet to `data/bronze/`, then transforms and cleans to `data/silver/`.
 
-## Data Flow
+### Gold Builder
+Design Gold aggregation tables interactively. Select Silver tables, choose dimensions and measures, and the app generates and runs the PySpark aggregation.
+
+### Monitor Pipelines
+View run history, schedules, and last status for all pipelines defined in `config.yaml`.
+
+### Gold Agent *(requires `ANTHROPIC_API_KEY`)*
+Ask questions about your Gold data in plain English. The agent generates and runs PySpark queries and returns results with explanations.
+
+### Data Explorer
+Browse Bronze, Silver, and Gold tables. Inspect schemas, preview rows, view file metadata, and run cross-layer SQL queries via DuckDB — no Spark startup required.
+
+---
+
+## Adding a New Pipeline
+
+1. Add a new entry under `pipelines:` in `config.yaml`:
+
+```yaml
+- name: pl_my_domain_description_bronze_silver
+  schedule: daily
+  schedule_config:
+    type: Daily
+    time: "09:00"
+  sources:
+  - source_type: postgresql
+    mode: full
+    tables:
+      - my_pg_table
+  - source_type: file
+    mode: full
+    tables:
+      - my_file.csv
+```
+
+2. Run the pipeline from the **Bronze & Silver** page.
+
+3. The **Active Pipelines** section in `CLAUDE.md` updates automatically on save (via the `post_yaml_validate` hook).
+
+---
+
+## Project Structure
 
 ```
-SQL Server → Bronze Layer (Raw) → Silver Layer (Clean) → Gold Layer (Analytics)
+app.py                    — Streamlit router + theme
+pages/
+  2_Bronze_Silver.py      — Ingestion UI
+  3_Gold_Builder.py       — Gold table builder
+  4_Monitor_Pipelines.py  — Pipeline monitor
+  5_Gold_Agent.py         — AI query agent
+  6_Data_Explorer.py      — Data browser + DuckDB SQL
+
+src/
+  run_bronze.py           — Bronze ingestion CLI (called by UI)
+  run_silver_gold.py      — Silver/Gold pipeline CLI (called by UI)
+  analyse_gold.py         — Gold analysis (called by Gold Builder)
+  gold_agent.py           — AI agent logic (called by Gold Agent)
+  pipeline_docs.py        — Pipeline doc generator
+  bronze/ingestion.py     — BronzeLayer: PostgreSQL + file → Parquet
+  config/config_manager.py
+  utils/logger.py
+  utils/db_validator.py
+
+drivers/
+  postgresql-42.7.13.jar  — PostgreSQL JDBC driver (included)
+
+data/
+  bronze/                 — Raw Parquet output
+  silver/                 — Cleaned Parquet output
+  gold/                   — Aggregated Parquet output
+  sources/                — Input CSV/JSON files
+
+sql/
+  create_schema.sql       — Legacy SQL Server DDL (reference only)
+  insert_sample_data.sql  — Legacy SQL Server sample data (reference only)
+
+config.yaml               — All pipeline and connection config
+.env                      — Credentials (not committed)
 ```
 
-### Tables Generated
+---
 
-**Bronze Layer**:
-- products
-- customers
-- orders
-- order_items
+## Troubleshooting
 
-**Silver Layer**:
-- products (with standardized schema)
-- customers (with standardized schema)
-- orders (with date conversion)
-- order_items (with calculated line_total)
-
-**Gold Layer**:
-- sales_summary (combined order and product information)
-- daily_sales_by_category (aggregated daily sales by product category)
-- product_performance (product-level metrics and revenue)
-
-## Scheduling
-
-To run daily, set up a scheduler:
-
-**Windows Task Scheduler**:
-- Create a task that runs: `python src/main.py`
-- Schedule it to run daily at your preferred time
-
-**Linux/Mac Cron**:
+**PySpark fails to start**
+Ensure Java 11+ is installed and `JAVA_HOME` is set:
 ```bash
-0 2 * * * cd /path/to/ClaudeDataPipeline && python src/main.py
+java -version     # should print 11 or higher
+echo $JAVA_HOME   # should point to JDK root
 ```
 
-## Logging
+**PostgreSQL connection refused**
+Confirm PostgreSQL is running and credentials in `.env` match your setup:
+```bash
+psql -U $PG_USERNAME -d postgres -c "SELECT 1"
+```
 
-Pipeline logs are stored in `logs/` with timestamps. Check logs for:
-- Data ingestion status
-- Transformation details
-- Error messages and debugging info
+**`ModuleNotFoundError` on import**
+Run from the project root, not from inside `src/`:
+```bash
+cd ClaudeDataPipeline
+streamlit run app.py
+```
 
-## Next Steps
+**Login always fails / "Invalid credentials"**
+Ensure `NF_USERNAME` and `NF_PASSWORD` are set as system environment variables (not in `.env`). Restart your terminal and re-run `streamlit run app.py` after setting them.
 
-1. Create SQL Server sample data (see sql/create_schema.sql)
-2. Update config.yaml with your SQL Server connection details
-3. Run `python src/main.py` to execute the pipeline
-4. Verify output in `data/` directories
-5. Set up scheduling for daily execution
+**Gold Agent returns no API key error**
+Set `ANTHROPIC_API_KEY` in your `.env` file, or enter it directly in the Gold Agent page sidebar.

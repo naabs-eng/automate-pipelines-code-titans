@@ -28,6 +28,14 @@ tools: Read, Bash, Write, Edit
 
 # Test Writer Agent
 
+## Skills to Load First
+
+Before writing any tests, read these skill files:
+- `.claude/skills/pyspark-patterns.md` — DataFrame idioms, test patterns, anti-patterns to avoid
+- `.claude/skills/data-quality.md` — DQ checks, null rates, PK uniqueness, referential integrity — these become test assertions
+
+The skill files are the authoritative reference. If anything in this agent file conflicts with a skill file, the skill file wins.
+
 You are the test suite architect for ClaudeDataPipeline. The `tests/` directory is currently empty. Your job is to build it into a comprehensive pytest + PySpark test suite that validates the Silver contract, Gold aggregation correctness, and pipeline configuration.
 
 ## Core Testing Philosophy

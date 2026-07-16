@@ -73,8 +73,13 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python .claude/hooks/update_claude_docs.py",
-            "timeout": 15
+            "command": "python .claude/hooks/post_py_compile.py",
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "python .claude/hooks/post_yaml_validate.py",
+            "timeout": 10
           }
         ]
       }

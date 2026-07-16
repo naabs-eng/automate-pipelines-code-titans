@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Neural Forge — Pipeline Architecture</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background-color: #0b0d1b;
+    background-image:
+      radial-gradient(ellipse at 5%   5%,  rgba(124,58,237,0.55) 0%, transparent 50%),
+      radial-gradient(ellipse at 95%  5%,  rgba(14,165,233,0.45) 0%, transparent 50%),
+      radial-gradient(ellipse at 95% 95%,  rgba(236,72,153,0.32) 0%, transparent 50%),
+      radial-gradient(ellipse at 5%  95%,  rgba(79,70,229,0.40) 0%, transparent 50%),
+      radial-gradient(ellipse at 50% 50%,  rgba(139,92,246,0.14) 0%, transparent 60%);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 40px;
+  }
+
+  /* ── Header ─────────────────────────────────────────────────── */
+  .header {
+    text-align: center;
+    margin-bottom: 52px;
+  }
+  .header-brand {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    margin-bottom: 10px;
+  }
+  .header-icon {
+    font-size: 2.4rem;
+    background: linear-gradient(135deg, #a78bfa, #38bdf8);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 0 16px rgba(139,92,246,0.80));
+  }
+  .header-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 2.0rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    background: linear-gradient(135deg, #e2e8f0 0%, #c4b5fd 55%, #38bdf8 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .header-sub {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+    color: #34d399;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  /* ── Main flow row ───────────────────────────────────────────── */
+  .flow-row {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    width: 100%;
+    max-width: 1180px;
+    margin-bottom: 32px;
+  }
+
+  /* ── Arrow ───────────────────────────────────────────────────── */
+  .arrow {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex-shrink: 0;
+    width: 64px;
+    gap: 4px;
+  }
+  .arrow-line {
+    height: 2px;
+    width: 100%;
+    background: linear-gradient(90deg, rgba(139,92,246,0.6), rgba(56,189,248,0.6));
+    position: relative;
+  }
+  .arrow-line::after {
+    content: '';
+    position: absolute;
+    right: -1px;
+    top: 50%;
+    transform: translateY(-50%);
+    border: 6px solid transparent;
+    border-left: 10px solid rgba(56,189,248,0.85);
+  }
+  .arrow-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.58rem;
+    color: #475569;
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+  }
+
+  /* ── Layer card ──────────────────────────────────────────────── */
+  .card {
+    flex: 1;
+    border-radius: 16px;
+    padding: 24px 20px 20px;
+    position: relative;
+    overflow: hidden;
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 16px;
+    padding: 1.5px;
+    background: var(--card-border);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+
+  /* Source card */
+  .card-source {
+    background: rgba(14,165,233,0.07);
+    --card-border: linear-gradient(135deg, rgba(14,165,233,0.55), rgba(56,189,248,0.20));
+    box-shadow: 0 0 40px rgba(14,165,233,0.12), 0 4px 24px rgba(0,0,0,0.30);
+  }
+  /* Bronze card */
+  .card-bronze {
+    background: rgba(251,146,60,0.07);
+    --card-border: linear-gradient(135deg, rgba(251,146,60,0.55), rgba(234,88,12,0.20));
+    box-shadow: 0 0 40px rgba(251,146,60,0.12), 0 4px 24px rgba(0,0,0,0.30);
+  }
+  /* Silver card */
+  .card-silver {
+    background: rgba(148,163,184,0.07);
+    --card-border: linear-gradient(135deg, rgba(196,181,253,0.55), rgba(148,163,184,0.20));
+    box-shadow: 0 0 40px rgba(148,163,184,0.12), 0 4px 24px rgba(0,0,0,0.30);
+  }
+  /* Gold card */
+  .card-gold {
+    background: rgba(251,191,36,0.07);
+    --card-border: linear-gradient(135deg, rgba(251,191,36,0.55), rgba(245,158,11,0.20));
+    box-shadow: 0 0 40px rgba(251,191,36,0.12), 0 4px 24px rgba(0,0,0,0.30);
+  }
+
+  .card-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+  .badge-source { background: rgba(14,165,233,0.15); color: #38bdf8; border: 1px solid rgba(14,165,233,0.30); }
+  .badge-bronze { background: rgba(251,146,60,0.15); color: #fb923c; border: 1px solid rgba(251,146,60,0.30); }
+  .badge-silver { background: rgba(196,181,253,0.15); color: #c4b5fd; border: 1px solid rgba(196,181,253,0.30); }
+  .badge-gold   { background: rgba(251,191,36,0.15);  color: #fbbf24; border: 1px solid rgba(251,191,36,0.30); }
+
+  .card-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #f1f5f9;
+    margin-bottom: 6px;
+    letter-spacing: -0.01em;
+  }
+  .card-rule {
+    font-size: 0.75rem;
+    color: #64748b;
+    margin-bottom: 16px;
+    line-height: 1.4;
+  }
+  .card-items {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+  }
+  .item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+  .item-icon { font-size: 0.95rem; flex-shrink: 0; margin-top: 1px; }
+  .item-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    color: #94a3b8;
+    line-height: 1.4;
+  }
+  .item-text strong {
+    display: block;
+    color: #cbd5e1;
+    font-weight: 600;
+    font-size: 0.74rem;
+  }
+
+  /* ── Down arrow (gold → apps) ────────────────────────────────── */
+  .down-arrow-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    margin: 4px 0 4px;
+  }
+  .down-arrow-line {
+    width: 2px;
+    height: 36px;
+    background: linear-gradient(180deg, rgba(251,191,36,0.6), rgba(167,139,250,0.6));
+    position: relative;
+  }
+  .down-arrow-line::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-top: 10px solid rgba(167,139,250,0.85);
+  }
+  .down-arrow-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.58rem;
+    color: #475569;
+    letter-spacing: 0.06em;
+  }
+
+  /* ── Applications row ────────────────────────────────────────── */
+  .apps-section {
+    width: 100%;
+    max-width: 1180px;
+  }
+  .apps-header {
+    text-align: center;
+    margin-bottom: 16px;
+  }
+  .apps-label {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #a78bfa;
+    border: 1px solid rgba(139,92,246,0.30);
+    background: rgba(139,92,246,0.08);
+    padding: 4px 14px;
+    border-radius: 20px;
+  }
+  .apps-row {
+    display: flex;
+    gap: 12px;
+  }
+  .app-card {
+    flex: 1;
+    border-radius: 12px;
+    padding: 16px 14px;
+    background: rgba(139,92,246,0.06);
+    border: 1px solid rgba(139,92,246,0.20);
+    backdrop-filter: blur(12px);
+    text-align: center;
+    transition: all 0.2s ease;
+  }
+  .app-card:hover {
+    border-color: rgba(167,139,250,0.45);
+    box-shadow: 0 0 24px rgba(139,92,246,0.18);
+    transform: translateY(-2px);
+  }
+  .app-icon { font-size: 1.4rem; margin-bottom: 8px; display: block; }
+  .app-name {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #c4b5fd;
+    letter-spacing: 0.02em;
+    margin-bottom: 4px;
+  }
+  .app-desc {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.65rem;
+    color: #475569;
+    line-height: 1.4;
+  }
+  .app-card.ai-card {
+    background: linear-gradient(135deg, rgba(124,58,237,0.12), rgba(14,165,233,0.06));
+    border-color: rgba(167,139,250,0.35);
+    box-shadow: 0 0 30px rgba(139,92,246,0.14);
+  }
+  .app-card.ai-card .app-name { color: #a78bfa; }
+  .ai-badge {
+    display: inline-block;
+    margin-top: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.55rem;
+    color: #34d399;
+    background: rgba(52,211,153,0.10);
+    border: 1px solid rgba(52,211,153,0.25);
+    border-radius: 4px;
+    padding: 2px 6px;
+    letter-spacing: 0.08em;
+  }
+
+  /* ── Footer ──────────────────────────────────────────────────── */
+  .footer {
+    margin-top: 44px;
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.58rem;
+    color: #1e293b;
+    letter-spacing: 0.08em;
+  }
+
+  /* ── Neural network SVG overlay ──────────────────────────────── */
+  .bg-svg {
+    position: fixed; inset: 0;
+    pointer-events: none; z-index: 0; overflow: hidden;
+    opacity: 0.5;
+  }
+  .bg-svg svg { width: 100%; height: 100%; }
+  .nf-edge { stroke-width: 0.8; fill: none; stroke-dasharray: 5 7; }
+  .nf-edge-v { stroke: rgba(139,92,246,0.18); animation: flow 5s linear infinite; }
+  .nf-edge-c { stroke: rgba(14,165,233,0.14);  animation: flow 7s linear infinite; }
+  @keyframes flow { to { stroke-dashoffset: -24; } }
+
+  .content { position: relative; z-index: 1; display: contents; }
+</style>
+</head>
+<body>
+
+<!-- Background neural net -->
+<div class="bg-svg">
+<svg viewBox="0 0 1400 900" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+  <line class="nf-edge nf-edge-v" x1="50"  y1="150" x2="300" y2="80"/>
+  <line class="nf-edge nf-edge-v" x1="50"  y1="150" x2="300" y2="300"/>
+  <line class="nf-edge nf-edge-c" x1="300" y1="80"  x2="600" y2="140"/>
+  <line class="nf-edge nf-edge-c" x1="300" y1="300" x2="600" y2="240"/>
+  <line class="nf-edge nf-edge-v" x1="600" y1="140" x2="900" y2="100"/>
+  <line class="nf-edge nf-edge-v" x1="600" y1="240" x2="900" y2="300"/>
+  <line class="nf-edge nf-edge-c" x1="900" y1="100" x2="1200" y2="180"/>
+  <line class="nf-edge nf-edge-c" x1="900" y1="300" x2="1200" y2="180"/>
+  <line class="nf-edge nf-edge-v" x1="50"  y1="600" x2="300" y2="700"/>
+  <line class="nf-edge nf-edge-c" x1="300" y1="700" x2="700" y2="750"/>
+  <line class="nf-edge nf-edge-v" x1="700" y1="750" x2="1100" y2="700"/>
+  <line class="nf-edge nf-edge-c" x1="1100" y1="700" x2="1350" y2="600"/>
+  <circle fill="rgba(139,92,246,0.35)" cx="50"  cy="150" r="4"/>
+  <circle fill="rgba(14,165,233,0.35)"  cx="300" cy="80"  r="3"/>
+  <circle fill="rgba(139,92,246,0.35)" cx="600" cy="140" r="4"/>
+  <circle fill="rgba(236,72,153,0.30)"  cx="900" cy="100" r="3"/>
+  <circle fill="rgba(139,92,246,0.50)" cx="1200" cy="180" r="6"/>
+</svg>
+</div>
+
+<div class="content">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-brand">
+      <span class="header-icon">⬡</span>
+      <span class="header-title">NEURAL FORGE</span>
+    </div>
+    <div class="header-sub">Medallion Data Pipeline Architecture &nbsp;·&nbsp; Bronze → Silver → Gold</div>
+  </div>
+
+  <!-- Main flow -->
+  <div class="flow-row">
+
+    <!-- Sources -->
+    <div class="card card-source">
+      <div class="card-badge badge-source">⬡ Sources</div>
+      <div class="card-title">Data Sources</div>
+      <div class="card-rule">Raw input — structured &amp; semi-structured</div>
+      <div class="card-items">
+        <div class="item">
+          <span class="item-icon">🗄️</span>
+          <div class="item-text"><strong>PostgreSQL</strong>pg_customers · pg_employees</div>
+        </div>
+        <div class="item">
+          <span class="item-icon">📄</span>
+          <div class="item-text"><strong>Flat Files</strong>CSV · JSON (data/sources/)</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Arrow -->
+    <div class="arrow">
+      <div class="arrow-line"></div>
+      <div class="arrow-label">Ingest</div>
+    </div>
+
+    <!-- Bronze -->
+    <div class="card card-bronze">
+      <div class="card-badge badge-bronze">🥉 Bronze</div>
+      <div class="card-title">Bronze Layer</div>
+      <div class="card-rule">Faithful raw copy — zero transforms</div>
+      <div class="card-items">
+        <div class="item">
+          <span class="item-icon">📦</span>
+          <div class="item-text"><strong>Parquet (overwrite)</strong>data/bronze/&lt;table&gt;_bronze/</div>
+        </div>
+        <div class="item">
+          <span class="item-icon">🏷️</span>
+          <div class="item-text"><strong>Audit columns added</strong>_ingestion_timestamp · _source_name</div>
+        </div>
+        <div class="item">
+          <span class="item-icon">⚡</span>
+          <div class="item-text"><strong>PySpark engine</strong>Full load · Incremental modes</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Arrow -->
+    <div class="arrow">
+      <div class="arrow-line"></div>
+      <div class="arrow-label">Clean</div>
+    </div>
+
+    <!-- Silver -->
+    <div class="card card-silver">
+      <div class="card-badge badge-silver">🥈 Silver</div>
+      <div class="card-title">Silver Layer</div>
+      <div class="card-rule">Typed · snake_case · null-safe</div>
+      <div class="card-items">
+        <div class="item">
+          <span class="item-icon">✅</span>
+          <div class="item-text"><strong>Type casting &amp; rename</strong>snake_case column names</div>
+        </div>
+        <div class="item">
+          <span class="item-icon">🔒</span>
+          <div class="item-text"><strong>Null-safe PKs</strong>Non-null primary key enforced</div>
+        </div>
+        <div class="item">
+          <span class="item-icon">📂</span>
+          <div class="item-text"><strong>Parquet (overwrite)</strong>data/silver/&lt;table&gt;_silver/</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Arrow -->
+    <div class="arrow">
+      <div class="arrow-line"></div>
+      <div class="arrow-label">Aggregate</div>
+    </div>
+
+    <!-- Gold -->
+    <div class="card card-gold">
+      <div class="card-badge badge-gold">🥇 Gold</div>
+      <div class="card-title">Gold Layer</div>
+      <div class="card-rule">Business aggregations — analyst-ready</div>
+      <div class="card-items">
+        <div class="item">
+          <span class="item-icon">📊</span>
+          <div class="item-text"><strong>Revenue Summary</strong>gold_customer_revenue_summary</div>
+        </div>
+        <div class="item">
+          <span class="item-icon">🏢</span>
+          <div class="item-text"><strong>HR Leave Metrics</strong>gold_departmental_leave_utilization</div>
+        </div>
+        <div class="item">
+          <span class="item-icon">🔗</span>
+          <div class="item-text"><strong>Left join strategy</strong>groupBy + agg only</div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /flow-row -->
+
+  <!-- Down arrow -->
+  <div class="down-arrow-wrap">
+    <div class="down-arrow-line"></div>
+    <div class="down-arrow-label">Serve</div>
+  </div>
+
+  <!-- Applications -->
+  <div class="apps-section">
+    <div class="apps-header">
+      <span class="apps-label">⬡ Streamlit Application Layer</span>
+    </div>
+    <div class="apps-row">
+      <div class="app-card">
+        <span class="app-icon">📊</span>
+        <div class="app-name">Monitor Pipelines</div>
+        <div class="app-desc">Pipeline run history, schedules &amp; last status</div>
+      </div>
+      <div class="app-card">
+        <span class="app-icon">🔍</span>
+        <div class="app-name">Data Explorer</div>
+        <div class="app-desc">Browse all layers · DuckDB SQL · cross-layer queries</div>
+      </div>
+      <div class="app-card">
+        <span class="app-icon">🔄</span>
+        <div class="app-name">Bronze &amp; Silver</div>
+        <div class="app-desc">Configure sources, validate &amp; run ingestion pipelines</div>
+      </div>
+      <div class="app-card">
+        <span class="app-icon">🏆</span>
+        <div class="app-name">Gold Builder</div>
+        <div class="app-desc">Design aggregation tables interactively — no code</div>
+      </div>
+      <div class="app-card ai-card">
+        <span class="app-icon">🤖</span>
+        <div class="app-name">Gold Agent</div>
+        <div class="app-desc">Natural language → PySpark query → instant insight</div>
+        <span class="ai-badge">AI · Claude API</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">NEURAL FORGE &nbsp;·&nbsp; DATA PIPELINE ENGINE &nbsp;·&nbsp; v1.0 &nbsp;·&nbsp; MEDALLION ARCHITECTURE</div>
+
+</div><!-- /content -->
+</body>
+</html>

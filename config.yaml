@@ -1,39 +1,136 @@
+file_sources:
+  base_dir: ./data/sources
 paths:
   bronze: ./data/bronze
   gold: ./data/gold
   logs: ./logs
   silver: ./data/silver
-pipeline:
-  data_format: parquet
-  frequency: daily
+pipelines:
+- created_at: '2026-07-11'
+  last_run: 2026-07-11T09:59
+  last_status: success
+  name: pl_enrich_customer_transactions_bronze_silver
+  schedule: daily
+  schedule_config:
+    time: 08:00
+    type: Daily
+  sources:
+  - connection:
+      database: postgres
+      host: localhost
+      port: 5432
+    mode: full
+    source_type: postgresql
+    tables:
+    - pg_customers
+  - mode: full
+    source_type: file
+    tables:
+    - transactions.json
+- created_at: '2026-07-12'
+  last_run: 2026-07-12T11:55
+  last_status: success
+  name: pl_hr_employee_leave_reconciliation_bronze_silver
+  schedule: run_once
+  schedule_config:
+    type: Run Once
+  sources:
+  - mode: full
+    source_type: postgresql
+    tables:
+    - pg_employees
+  - mode: full
+    source_type: file
+    tables:
+    - leave_logs.csv
+- created_at: '2026-07-12'
+  last_run: 2026-07-12T12:50
+  last_status: success
+  name: pl_hr_employee_leave_reconciliation_gold
+  schedule: run_once
+  schedule_config:
+    type: Run Once
+  sources:
+  - source_type: silver
+    tables:
+    - leave_logs_silver
+    - pg_employees_silver
+- created_at: '2026-07-14'
+  last_run: 2026-07-14T06:02
+  last_status: success
+  name: pl_logistics_fleet_route_audit_bronze_silver
+  schedule: daily
+  schedule_config:
+    time: '15:30'
+    type: Daily
+  sources:
+  - mode: full
+    source_type: postgresql
+    tables:
+    - public.pg_fleet_vehicles
+  - mode: full
+    source_type: file
+    tables:
+    - route_telemetry.csv
+- created_at: '2026-07-14'
+  last_run: 2026-07-14T06:34
+  last_status: success
+  name: pl_logistics_fleet_route_audit_gold
+  schedule: run_once
+  schedule_config:
+    type: Run Once
+  sources:
+  - source_type: silver
+    tables:
+    - pg_fleet_vehicles_silver
+    - route_telemetry_silver
+- created_at: '2026-07-16'
+  last_run: 2026-07-16T07:19
+  last_status: success
+  name: gold_agent_performance_sla_audit_bronze_silver
+  schedule: run_once
+  schedule_config:
+    type: Run Once
+  sources:
+  - mode: full
+    source_type: postgresql
+    tables:
+    - public.pg_support_agents
+  - mode: full
+    source_type: file
+    tables:
+    - ticket_events.json
+- created_at: '2026-07-16'
+  last_run: 2026-07-16T07:23
+  last_status: success
+  name: gold_agent_performance_sla_audit_gold
+  schedule: run_once
+  schedule_config:
+    type: Run Once
+  sources:
+  - source_type: silver
+    tables:
+    - pg_support_agents_silver
+    - ticket_events_silver
+- created_at: '2026-07-16'
+  last_run: 2026-07-16T07:40
+  last_status: success
+  name: pl_enrich_customer_transactions_gold
+  schedule: run_once
+  schedule_config:
+    type: Run Once
+  sources:
+  - source_type: silver
+    tables:
+    - pg_customers_silver
+    - transactions_silver
 postgresql:
-  database: salesdb
+  database: postgres
   host: localhost
   port: 5432
 spark:
   app_name: SalesDataPipeline
   executor_memory: 2g
-  jdbc_driver_path: drivers/mssql-jdbc-13.4.0.jre11.jar
   master: local[*]
   memory: 4g
   pg_driver_path: drivers/postgresql-42.7.13.jar
-sql_server:
-  database: SalesDB
-  server: localhost\SQLEXPRESS
-tables:
-  pg_source:
-  - bronze_table: suppliers
-    name: public.suppliers
-  - bronze_table: inventory
-    name: public.inventory
-  - bronze_table: shipments
-    name: public.shipments
-  source:
-  - bronze_table: products
-    name: dbo.Products
-  - bronze_table: customers
-    name: dbo.Customers
-  - bronze_table: orders
-    name: dbo.Orders
-  - bronze_table: order_items
-    name: dbo.OrderItems

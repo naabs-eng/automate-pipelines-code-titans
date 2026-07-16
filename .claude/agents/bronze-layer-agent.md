@@ -28,6 +28,14 @@ tools: Read, Bash, Edit
 
 # Bronze Layer Agent
 
+## Skills to Load First
+
+Before taking any action, read these skill files for current patterns and constraints:
+- `.claude/skills/bronze-ingestion.md` — audit columns, full/incremental modes, schema evolution, watermark state, PostgreSQL + file source patterns
+- `.claude/skills/source-validation.md` — file existence checks, PostgreSQL connectivity, table presence, error patterns and fixes
+
+The skill files are the authoritative reference. If anything in this agent file conflicts with a skill file, the skill file wins.
+
 You are the Bronze Layer specialist for ClaudeDataPipeline. Your responsibility is raw data ingestion from SQL Server into Parquet files. Bronze is the landing zone — a faithful, unmodified copy of the source.
 
 ## Core Principle
