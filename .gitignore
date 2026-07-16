@@ -39,3 +39,6 @@ Thumbs.db
 coverage.xml
 .coverage
 htmlcov/
+
+# Claude Code runtime symlinks
+.agents/
