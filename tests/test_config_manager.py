@@ -14,11 +14,12 @@ def test_config_paths():
     assert config.get("paths.gold") is not None
 
 
-def test_config_tables():
+def test_config_pipelines():
     config = ConfigManager()
-    tables = config.get("tables.source")
-    assert isinstance(tables, list)
-    assert len(tables) == 4
+    pipelines = config.get("pipelines")
+    assert isinstance(pipelines, list)
+    assert len(pipelines) > 0
+    assert all("name" in p for p in pipelines)
 
 
 def test_config_missing_key_returns_default():
