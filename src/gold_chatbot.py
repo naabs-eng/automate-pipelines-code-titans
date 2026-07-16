@@ -4,11 +4,12 @@ Gold Builder chatbot utilities — pure Python, no Streamlit, no API.
 Used by pages/3_Gold_Builder.py to power the hybrid rule-based chat
 assistant for the Business Requirements step.
 """
+
 import re
 from pathlib import Path
 
-
 # ── Schema parsing ─────────────────────────────────────────────────────────────
+
 
 def parse_destination_schema(text: str) -> dict:
     """
@@ -28,22 +29,22 @@ def parse_destination_schema(text: str) -> dict:
     # Extract destination name
     destination = None
     # Pattern 1: "word:" at the start
-    m = re.match(r'^(\w+)\s*:', text)
+    m = re.match(r"^(\w+)\s*:", text)
     if m:
         destination = m.group(1)
     else:
         # Pattern 2: "called X" or "named X" or "table X"
-        m = re.search(r'\b(?:called|named|table)\s+(\w+)', text, re.IGNORECASE)
+        m = re.search(r"\b(?:called|named|table)\s+(\w+)", text, re.IGNORECASE)
         if m:
             destination = m.group(1)
         else:
             # Pattern 3: first word/identifier before "with" or before the columns
-            m = re.match(r'^(\w+)\b', text)
+            m = re.match(r"^(\w+)\b", text)
             if m:
                 destination = m.group(1)
 
     # Extract columns: name (TYPE) patterns
-    typed_cols = re.findall(r'(\w+)\s*\(([^)]+)\)', text)
+    typed_cols = re.findall(r"(\w+)\s*\(([^)]+)\)", text)
     columns = []
     if typed_cols:
         for name, dtype in typed_cols:
@@ -51,21 +52,39 @@ def parse_destination_schema(text: str) -> dict:
                 columns.append({"name": name, "type": dtype.strip().upper()})
     else:
         # Fallback: try comma-separated bare identifiers after the colon
-        after_colon = re.split(r':', text, maxsplit=1)[-1] if ':' in text else text
+        after_colon = re.split(r":", text, maxsplit=1)[-1] if ":" in text else text
         # Also try after "with"
-        after_with = re.split(r'\bwith\b', after_colon, maxsplit=1, flags=re.IGNORECASE)[-1]
-        bare = re.findall(r'\b([a-zA-Z_]\w*)\b', after_with)
+        after_with = re.split(r"\bwith\b", after_colon, maxsplit=1, flags=re.IGNORECASE)[-1]
+        bare = re.findall(r"\b([a-zA-Z_]\w*)\b", after_with)
         for name in bare:
-            if name.lower() not in (
-                "table", "called", "named", "with", "and", "the", "a", "an",
-                "columns", "column", "fields", "field", "i", "want", "need"
-            ) and name != destination:
+            if (
+                name.lower()
+                not in (
+                    "table",
+                    "called",
+                    "named",
+                    "with",
+                    "and",
+                    "the",
+                    "a",
+                    "an",
+                    "columns",
+                    "column",
+                    "fields",
+                    "field",
+                    "i",
+                    "want",
+                    "need",
+                )
+                and name != destination
+            ):
                 columns.append({"name": name, "type": None})
 
     return {"destination": destination, "columns": columns}
 
 
 # ── Silver schema loading ──────────────────────────────────────────────────────
+
 
 def load_silver_schemas(tables: list, silver_path: str) -> dict:
     """
@@ -126,8 +145,7 @@ _AGG_PREFIXES = {
 _TEMPORAL_AGG_PREFIXES = {"last_", "latest_", "first_", "earliest_"}
 
 # Types considered numeric for aggregation candidates
-_NUMERIC_TYPES = {"int8", "int16", "int32", "int64", "float", "double",
-                  "decimal", "float32", "float64"}
+_NUMERIC_TYPES = {"int8", "int16", "int32", "int64", "float", "double", "decimal", "float32", "float64"}
 
 
 def _is_numeric(dtype: str) -> bool:
@@ -167,7 +185,7 @@ def map_column(col_name: str, silver_schemas: dict) -> dict:
     _stripped = col_lower
     for _p in _AGG_PREFIXES:
         if col_lower.startswith(_p):
-            _stripped = col_lower[len(_p):]
+            _stripped = col_lower[len(_p) :]
             break
     if (
         _stripped.endswith("_count")
@@ -195,16 +213,13 @@ def map_column(col_name: str, silver_schemas: dict) -> dict:
     # ── Aggregation pattern match ─────────────────────────────────────────────
     for prefix, func in _AGG_PREFIXES.items():
         if col_lower.startswith(prefix):
-            remainder = col_lower[len(prefix):]  # e.g. "amount", "price"
+            remainder = col_lower[len(prefix) :]  # e.g. "amount", "price"
             is_temporal = prefix in _TEMPORAL_AGG_PREFIXES
 
             # COUNT(*) special case
             if prefix in ("count_", "num_", "cnt_"):
                 # Look for a matching column; if none found, fall back to COUNT(*)
-                candidates = [
-                    c for c in all_cols
-                    if c["name"].lower() == remainder or remainder in c["name"].lower()
-                ]
+                candidates = [c for c in all_cols if c["name"].lower() == remainder or remainder in c["name"].lower()]
                 if not candidates:
                     return {
                         "status": "aggregation",
@@ -215,11 +230,7 @@ def map_column(col_name: str, silver_schemas: dict) -> dict:
                     }
 
             # Exact match: numeric for standard prefixes, any type for temporal
-            exact = [
-                c for c in all_cols
-                if c["name"].lower() == remainder
-                and (is_temporal or _is_numeric(c["type"]))
-            ]
+            exact = [c for c in all_cols if c["name"].lower() == remainder and (is_temporal or _is_numeric(c["type"]))]
             if len(exact) == 1:
                 return {
                     "status": "aggregation",
@@ -234,36 +245,27 @@ def map_column(col_name: str, silver_schemas: dict) -> dict:
                     "status": "aggregation_candidates",
                     "col": col_name,
                     "func": func,
-                    "candidates": [
-                        {"col": c["name"], "table": c["table"], "type": c["type"]}
-                        for c in exact
-                    ],
+                    "candidates": [{"col": c["name"], "table": c["table"], "type": c["type"]} for c in exact],
                     "alias": col_name,
                 }
 
             # Fuzzy: name contains remainder, same type relaxation
             fuzzy_num = [
-                c for c in all_cols
-                if remainder in c["name"].lower()
-                and (is_temporal or _is_numeric(c["type"]))
+                c for c in all_cols if remainder in c["name"].lower() and (is_temporal or _is_numeric(c["type"]))
             ]
             if fuzzy_num:
                 return {
                     "status": "aggregation_candidates",
                     "col": col_name,
                     "func": func,
-                    "candidates": [
-                        {"col": c["name"], "table": c["table"], "type": c["type"]}
-                        for c in fuzzy_num[:5]
-                    ],
+                    "candidates": [{"col": c["name"], "table": c["table"], "type": c["type"]} for c in fuzzy_num[:5]],
                     "alias": col_name,
                 }
 
             # Fallback for temporal: show all timestamp/date/string cols as candidates
             if is_temporal:
                 temporal_all = [
-                    c for c in all_cols
-                    if any(t in c["type"].lower() for t in ("timestamp", "date", "string"))
+                    c for c in all_cols if any(t in c["type"].lower() for t in ("timestamp", "date", "string"))
                 ]
                 if temporal_all:
                     return {
@@ -271,8 +273,7 @@ def map_column(col_name: str, silver_schemas: dict) -> dict:
                         "col": col_name,
                         "func": func,
                         "candidates": [
-                            {"col": c["name"], "table": c["table"], "type": c["type"]}
-                            for c in temporal_all[:5]
+                            {"col": c["name"], "table": c["table"], "type": c["type"]} for c in temporal_all[:5]
                         ],
                         "alias": col_name,
                     }
@@ -286,8 +287,7 @@ def map_column(col_name: str, silver_schemas: dict) -> dict:
                         "col": col_name,
                         "func": func,
                         "candidates": [
-                            {"col": c["name"], "table": c["table"], "type": c["type"]}
-                            for c in all_numeric[:5]
+                            {"col": c["name"], "table": c["table"], "type": c["type"]} for c in all_numeric[:5]
                         ],
                         "alias": col_name,
                     }
@@ -305,10 +305,7 @@ def map_column(col_name: str, silver_schemas: dict) -> dict:
         return {
             "status": "fuzzy",
             "col": col_name,
-            "candidates": [
-                {"col": c["name"], "table": c["table"], "type": c["type"]}
-                for c in fuzzy[:4]
-            ],
+            "candidates": [{"col": c["name"], "table": c["table"], "type": c["type"]} for c in fuzzy[:4]],
         }
 
     return {
@@ -320,12 +317,14 @@ def map_column(col_name: str, silver_schemas: dict) -> dict:
 
 # ── Join key detection ─────────────────────────────────────────────────────────
 
+
 def detect_join_keys(silver_schemas: dict) -> list:
     """
     Return column names that appear in 2+ Silver tables (likely join keys).
     Priority order: *_id columns first, then others.
     """
     from collections import Counter
+
     counts = Counter()
     for schema in silver_schemas.values():
         for col in schema:
@@ -339,6 +338,7 @@ def detect_join_keys(silver_schemas: dict) -> list:
 
 
 # ── Requirements text builder ──────────────────────────────────────────────────
+
 
 def build_requirements_text(
     destination: str,
@@ -430,6 +430,7 @@ def build_requirements_text(
 
 # ── Requirements text parser ───────────────────────────────────────────────────
 
+
 def parse_requirements_to_plan(text: str, source_tables: list) -> dict:
     """
     Parse a requirements text (produced by build_requirements_text) back into
@@ -510,34 +511,40 @@ def parse_requirements_to_plan(text: str, source_tables: list) -> dict:
                 _as_idx = val.rfind(" AS ")
             if _as_idx != -1:
                 _expr = val[:_as_idx].strip()
-                _alias = val[_as_idx + 4:].strip()
+                _alias = val[_as_idx + 4 :].strip()
                 _fp = _expr.find("(")
                 _lp = _expr.rfind(")")
-                if _fp > 0 and _lp > _fp and re.match(r'^\w+$', _expr[:_fp].strip()):
-                    aggregations.append({
-                        "func": _expr[:_fp].strip().upper(),
-                        "col": _expr[_fp + 1:_lp].strip(),
-                        "alias": _alias,
-                    })
+                if _fp > 0 and _lp > _fp and re.match(r"^\w+$", _expr[:_fp].strip()):
+                    aggregations.append(
+                        {
+                            "func": _expr[:_fp].strip().upper(),
+                            "col": _expr[_fp + 1 : _lp].strip(),
+                            "alias": _alias,
+                        }
+                    )
         elif section == "joins":
             # "fact -> dim (on key)" or with arrow variants
             m = re.match(r"(\w+)\s*[-→>]+\s*(\w+)\s*\(on\s+(\w+)\)", val, re.IGNORECASE)
             if m:
-                joins.append({
-                    "fact": m.group(1),
-                    "dim": m.group(2),
-                    "on": m.group(3),
-                    "type": "left",
-                })
+                joins.append(
+                    {
+                        "fact": m.group(1),
+                        "dim": m.group(2),
+                        "on": m.group(3),
+                        "type": "left",
+                    }
+                )
         elif section == "filters":
             # derived boolean: is_/has_/flag_ col = expr
             dc_m = re.match(r"((?:is_|has_|flag_)\w+)\s*=\s*(.+)", val, re.IGNORECASE)
             if dc_m:
-                derived_columns.append({
-                    "column": dc_m.group(1),
-                    "expression": dc_m.group(2).strip(),
-                    "type": "boolean",
-                })
+                derived_columns.append(
+                    {
+                        "column": dc_m.group(1),
+                        "expression": dc_m.group(2).strip(),
+                        "type": "boolean",
+                    }
+                )
             else:
                 filters.append(val)
 

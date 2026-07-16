@@ -35,4 +35,3 @@ class ConfigManager:
 
     def reload(self):
         self.config = self._load_config()
-

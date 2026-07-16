@@ -6,18 +6,26 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from dotenv import load_dotenv
-from pyspark.sql import SparkSession
-from pyspark.sql import functions as F
-from pyspark.sql.types import (DateType, DecimalType, DoubleType, FloatType,
-                               IntegerType, LongType, StringType, TimestampType)
+from dotenv import load_dotenv  # noqa: E402
+from pyspark.sql import SparkSession  # noqa: E402
+from pyspark.sql import functions as F  # noqa: E402
+from pyspark.sql.types import (  # noqa: E402
+    DateType,
+    DecimalType,
+    DoubleType,
+    FloatType,
+    IntegerType,
+    LongType,
+    StringType,
+    TimestampType,
+)
 
 load_dotenv()
 
-from config.config_manager import ConfigManager
-
+from config.config_manager import ConfigManager  # noqa: E402
 
 # ── Naming helpers ─────────────────────────────────────────────────────────────
+
 
 def _silver_name(bronze_name):
     """suppliers_bronze  →  suppliers_silver"""
@@ -37,6 +45,7 @@ def _base_name(table_name):
 
 # ── Schema helpers ─────────────────────────────────────────────────────────────
 
+
 def to_snake_case(name):
     s = re.sub(r"(.)([A-Z][a-z]+)", r"\1_\2", name)
     s = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", s)
@@ -55,6 +64,7 @@ def infer_primary_key(fields):
 
 
 # ── Layer runners ──────────────────────────────────────────────────────────────
+
 
 def run_silver(spark, bronze_table_name, bronze_path, silver_path):
     silver_table_name = _silver_name(bronze_table_name)
@@ -98,7 +108,8 @@ def run_gold(spark, table_name, silver_path, gold_path, silver_df):
     pk_snake = infer_primary_key(fields)
 
     dim_cols = [
-        f.name for f in fields
+        f.name
+        for f in fields
         if isinstance(f.dataType, StringType)
         and f.name != pk_snake
         and not f.name.endswith("_id")
@@ -107,16 +118,14 @@ def run_gold(spark, table_name, silver_path, gold_path, silver_df):
     ]
 
     measure_cols = [
-        f.name for f in fields
+        f.name
+        for f in fields
         if isinstance(f.dataType, (IntegerType, LongType, FloatType, DoubleType, DecimalType))
         and not f.name.endswith("_id")
         and f.name != pk_snake
     ]
 
-    date_cols = [
-        f.name for f in fields
-        if isinstance(f.dataType, (DateType, TimestampType))
-    ]
+    date_cols = [f.name for f in fields if isinstance(f.dataType, (DateType, TimestampType))]
 
     group_cols = dim_cols[:2] + date_cols[:1] if dim_cols or date_cols else None
 
@@ -133,12 +142,7 @@ def run_gold(spark, table_name, silver_path, gold_path, silver_df):
         agg_exprs.append(F.avg(col).alias(f"avg_{col}"))
 
     gold_table = f"{base}_summary"
-    df_gold = (
-        silver_df
-        .groupBy(*group_cols)
-        .agg(*agg_exprs)
-        .orderBy(F.col("record_count").desc())
-    )
+    df_gold = silver_df.groupBy(*group_cols).agg(*agg_exprs).orderBy(F.col("record_count").desc())
 
     out = Path(gold_path) / gold_table
     df_gold.coalesce(1).write.mode("overwrite").parquet(str(out))
@@ -147,6 +151,7 @@ def run_gold(spark, table_name, silver_path, gold_path, silver_df):
 
 
 # ── Cross-table joined Gold execution ──────────────────────────────────────────
+
 
 def run_joined_gold(plan, config, spark):
     """
@@ -184,7 +189,9 @@ def run_joined_gold(plan, config, spark):
     dim_df = spark.read.parquet(str(Path(silver_path) / dim_table))
 
     # Avoid column name collisions on join key
-    joined = fact_df.join(dim_df.drop(*(c for c in dim_df.columns if c != join_key and c in fact_df.columns)), join_key, "left")
+    joined = fact_df.join(
+        dim_df.drop(*(c for c in dim_df.columns if c != join_key and c in fact_df.columns)), join_key, "left"
+    )
 
     # Collect group-by and aggregation specs from all table plans
     group_cols = []
@@ -230,6 +237,7 @@ def run_joined_gold(plan, config, spark):
 
 # ── Agent plan executor ────────────────────────────────────────────────────────
 
+
 def run_agent_plan(plan, config, spark):
     """Execute a Gold plan produced by the Gold Agent chatbot (src/gold_agent.py)."""
     silver_path = config.get("paths.silver", "./data/silver")
@@ -257,7 +265,7 @@ def run_agent_plan(plan, config, spark):
         if "=" in on_raw:
             # Agent returned full expression e.g. "table.col = table.col" — extract bare names
             left_side, right_side = [s.strip() for s in on_raw.split("=", 1)]
-            left_col  = left_side.split(".")[-1].strip()
+            left_col = left_side.split(".")[-1].strip()
             right_col = right_side.split(".")[-1].strip()
             # Drop overlapping columns from dim EXCEPT the join key (needed for join condition)
             overlap = [c for c in dim_df.columns if c in df.columns and c != right_col]
@@ -319,27 +327,34 @@ def run_agent_plan(plan, config, spark):
 
 # ── Entry point ────────────────────────────────────────────────────────────────
 
+
 def main():
     parser = argparse.ArgumentParser(description="Run Silver and/or Gold layers")
     parser.add_argument(
-        "--tables", default=None,
+        "--tables",
+        default=None,
         help="Comma-separated bronze table names (e.g. suppliers_bronze,order_items_bronze)",
     )
     parser.add_argument(
-        "--silver-tables", default=None,
+        "--silver-tables",
+        default=None,
         help="Comma-separated silver table names for Gold-only runs from Gold Builder "
-             "(e.g. suppliers_silver,order_items_silver)",
+        "(e.g. suppliers_silver,order_items_silver)",
     )
     parser.add_argument(
-        "--layer", default="all", choices=["all", "silver", "gold"],
+        "--layer",
+        default="all",
+        choices=["all", "silver", "gold"],
         help="Which layer(s) to run (default: all)",
     )
     parser.add_argument(
-        "--plan-file", default=None,
+        "--plan-file",
+        default=None,
         help="Path to a Gold plan JSON file (from analyse_gold.py) — enables cross-table join execution",
     )
     parser.add_argument(
-        "--agent-plan-file", default=None,
+        "--agent-plan-file",
+        default=None,
         help="Path to an agent plan JSON file (from Gold Agent chat) — direct execution",
     )
     args = parser.parse_args()
@@ -418,7 +433,7 @@ def main():
             spark.stop()
             if not ok:
                 sys.exit(1)
-            print(f"\nDone. 1 succeeded, 0 failed.")
+            print("\nDone. 1 succeeded, 0 failed.")
             return
         # No join in plan — fall through to normal execution below
 

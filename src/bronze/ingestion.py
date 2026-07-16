@@ -31,8 +31,8 @@ class BronzeLayer:
     def _add_audit_columns(self, df, source_name, mode):
         return (
             df.withColumn("_ingestion_timestamp", F.current_timestamp())
-              .withColumn("_source_name", F.lit(source_name))
-              .withColumn("_load_mode", F.lit(mode))
+            .withColumn("_source_name", F.lit(source_name))
+            .withColumn("_load_mode", F.lit(mode))
         )
 
     def _write_bronze(self, df, output_path, mode):
@@ -49,15 +49,14 @@ class BronzeLayer:
         else:
             df.coalesce(1).write.mode("overwrite").parquet(str(output_path))
 
-    def ingest_from_postgresql(self, table_name, bronze_table_name, mode="full", watermark_col=None,
-                               host=None, port=None, database=None):
+    def ingest_from_postgresql(
+        self, table_name, bronze_table_name, mode="full", watermark_col=None, host=None, port=None, database=None
+    ):
         try:
             _host = host or self.config.get("postgresql.host")
             _port = port or self.config.get("postgresql.port")
             _database = database or self.config.get("postgresql.database")
-            self.logger.info(
-                f"Ingesting {table_name} from PostgreSQL {_host}:{_port}/{_database} (mode={mode})..."
-            )
+            self.logger.info(f"Ingesting {table_name} from PostgreSQL {_host}:{_port}/{_database} (mode={mode})...")
 
             jdbc_url = f"jdbc:postgresql://{_host}:{_port}/{_database}"
             props = {
@@ -115,11 +114,7 @@ class BronzeLayer:
 
             if file_format in ("csv", "tsv"):
                 sep = "\t" if file_format == "tsv" else ","
-                df = (
-                    self.spark.read
-                    .option("comment", "/")
-                    .csv(str(path), header=True, inferSchema=True, sep=sep)
-                )
+                df = self.spark.read.option("comment", "/").csv(str(path), header=True, inferSchema=True, sep=sep)
             elif file_format == "json":
                 df = self.spark.read.json(str(path))
             elif file_format == "parquet":
@@ -135,14 +130,16 @@ class BronzeLayer:
             row_count = df.count()
             self.logger.info(f"Successfully ingested {path.name} -> {bronze_table_name} ({row_count} rows)")
 
-            self._save_watermark(bronze_table_name, {
-                "last_ingested": datetime.now(timezone.utc).isoformat(),
-                "source_type": "file",
-                "mode": mode,
-                "file_path": str(path),
-            })
+            self._save_watermark(
+                bronze_table_name,
+                {
+                    "last_ingested": datetime.now(timezone.utc).isoformat(),
+                    "source_type": "file",
+                    "mode": mode,
+                    "file_path": str(path),
+                },
+            )
             return True
         except Exception as e:
             self.logger.error(f"Error ingesting file {file_path}: {str(e)}")
             return False
-

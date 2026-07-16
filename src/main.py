@@ -48,7 +48,7 @@ def main():
     logger.info("Starting data pipeline...")
 
     try:
-        bronze = BronzeLayer(spark, config, logger)
+        BronzeLayer(spark, config, logger)
         logger.info("Bronze layer initialized")
 
         logger.info("Bronze ingestion completed. Use run_bronze.py / run_silver_gold.py via the Streamlit UI.")

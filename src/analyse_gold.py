@@ -4,6 +4,7 @@ business requirements text, then outputs a structured Gold plan as JSON.
 
 Used by the Pipeline Runner UI to present a confirm-before-run plan to the user.
 """
+
 import argparse
 import json
 import re
@@ -12,7 +13,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from config.config_manager import ConfigManager
+from config.config_manager import ConfigManager  # noqa: E402
 
 try:
     import pyarrow.parquet as pq
@@ -21,46 +22,57 @@ except ImportError:
     sys.exit(1)
 
 _NUMERIC_SUBTYPES = {
-    "int8", "int16", "int32", "int64",
-    "uint8", "uint16", "uint32", "uint64",
-    "float", "float16", "float32", "float64",
-    "double", "decimal",
+    "int8",
+    "int16",
+    "int32",
+    "int64",
+    "uint8",
+    "uint16",
+    "uint32",
+    "uint64",
+    "float",
+    "float16",
+    "float32",
+    "float64",
+    "double",
+    "decimal",
 }
 _DATE_SUBTYPES = {"date32", "date64", "timestamp", "time32", "time64"}
 _AUDIT_PREFIX = "_"
 
 # Keywords are matched as substrings of the lowercased line (case-insensitive contains).
 _SECTION_KEYS = {
-    "kpi":          ["kpi", "kpis", "metric", "metrics"],
-    "grain":        ["grain", "target grain", "granularity"],
-    "dimensions":   ["dimension", "dimensions", "group by", "groupby", "slice by"],
-    "measures":     ["measure", "measures", "aggregate", "aggregation", "aggregations"],
-    "joins":        ["joins needed", "join needed", "joins:", "joins", "join"],
-    "rules":        ["business rule", "specific business rule", "rule", "filter"],
-    "destination":  ["destination table", "target gold table", "table name", "output table", "dest"],
+    "kpi": ["kpi", "kpis", "metric", "metrics"],
+    "grain": ["grain", "target grain", "granularity"],
+    "dimensions": ["dimension", "dimensions", "group by", "groupby", "slice by"],
+    "measures": ["measure", "measures", "aggregate", "aggregation", "aggregations"],
+    "joins": ["joins needed", "join needed", "joins:", "joins", "join"],
+    "rules": ["business rule", "specific business rule", "rule", "filter"],
+    "destination": ["destination table", "target gold table", "table name", "output table", "dest"],
     "output_schema": ["output schema", "output columns", "target schema", "schema"],
 }
 
 # Aggregation prefix patterns → (func, base_col_group)
 _AGG_PATTERNS = [
-    (re.compile(r'^total_(.+)$'),           'SUM'),
-    (re.compile(r'^sum_(.+)$'),             'SUM'),
-    (re.compile(r'^(.+)_total$'),           'SUM'),
-    (re.compile(r'^avg_(.+)$'),             'AVG'),
-    (re.compile(r'^average_(.+)$'),         'AVG'),
-    (re.compile(r'^(.+)_average$'),         'AVG'),
-    (re.compile(r'^(.+)_count$'),           'COUNT'),
-    (re.compile(r'^count_(.+)$'),           'COUNT'),
-    (re.compile(r'^total_(.+)_count$'),     'COUNT'),
-    (re.compile(r'^(.+)_transactions$'),    'COUNT'),
-    (re.compile(r'^last_(.+)$'),            'MAX'),
-    (re.compile(r'^latest_(.+)$'),          'MAX'),
-    (re.compile(r'^max_(.+)$'),             'MAX'),
-    (re.compile(r'^min_(.+)$'),             'MIN'),
+    (re.compile(r"^total_(.+)$"), "SUM"),
+    (re.compile(r"^sum_(.+)$"), "SUM"),
+    (re.compile(r"^(.+)_total$"), "SUM"),
+    (re.compile(r"^avg_(.+)$"), "AVG"),
+    (re.compile(r"^average_(.+)$"), "AVG"),
+    (re.compile(r"^(.+)_average$"), "AVG"),
+    (re.compile(r"^(.+)_count$"), "COUNT"),
+    (re.compile(r"^count_(.+)$"), "COUNT"),
+    (re.compile(r"^total_(.+)_count$"), "COUNT"),
+    (re.compile(r"^(.+)_transactions$"), "COUNT"),
+    (re.compile(r"^last_(.+)$"), "MAX"),
+    (re.compile(r"^latest_(.+)$"), "MAX"),
+    (re.compile(r"^max_(.+)$"), "MAX"),
+    (re.compile(r"^min_(.+)$"), "MIN"),
 ]
 
 
 # ── Schema reading ────────────────────────────────────────────────────────────
+
 
 def read_schema(silver_dir):
     parts = sorted(Path(silver_dir).glob("**/*.parquet"))
@@ -68,10 +80,7 @@ def read_schema(silver_dir):
         return None
     try:
         schema = pq.read_schema(str(parts[0]))
-        return [
-            {"name": schema.names[i], "type": str(schema.types[i])}
-            for i in range(len(schema.names))
-        ]
+        return [{"name": schema.names[i], "type": str(schema.types[i])} for i in range(len(schema.names))]
     except Exception as e:
         return {"error": str(e)}
 
@@ -94,6 +103,7 @@ def classify_field(name, type_str):
 
 # ── Requirements parsing ──────────────────────────────────────────────────────
 
+
 def parse_requirements(req_text):
     """
     Parse free-form requirements text into structured hints.
@@ -113,7 +123,7 @@ def parse_requirements(req_text):
             continue
 
         # Strip leading bullet/number markers for keyword detection
-        bare = re.sub(r'^[-*•\d]+\.?\s*', '', line).rstrip(":").strip().lower()
+        bare = re.sub(r"^[-*•\d]+\.?\s*", "", line).rstrip(":").strip().lower()
 
         # Check if this line signals a new section
         matched_section = None
@@ -127,8 +137,8 @@ def parse_requirements(req_text):
             # Also extract inline value: "Target Gold Table Name: myname" → capture "myname"
             colon_idx = line.find(":")
             if 0 < colon_idx < len(line) - 1:
-                val = line[colon_idx + 1:].strip().strip("`").strip()
-                if val and not re.match(r'^[-*•\d]', val):
+                val = line[colon_idx + 1 :].strip().strip("`").strip()
+                if val and not re.match(r"^[-*•\d]", val):
                     result[current].append(val)
             continue
 
@@ -137,14 +147,14 @@ def parse_requirements(req_text):
             continue
 
         # Accept: - bullet  * bullet  • bullet  numbered list  plain indented line
-        m = re.match(r'^[-*•\d]+\.?\s+(.+)$', line)
+        m = re.match(r"^[-*•\d]+\.?\s+(.+)$", line)
         content = m.group(1).strip() if m else line
 
         if not content:
             continue
 
         # Check if the bullet itself is a "Key: Value" inline pair
-        kv = re.match(r'^(.+?):\s+(.+)$', content)
+        kv = re.match(r"^(.+?):\s+(.+)$", content)
         if kv:
             key_part = kv.group(1).lower().strip()
             val_part = kv.group(2).strip().strip("`").strip()
@@ -171,7 +181,7 @@ def parse_output_schema_cols(bullets):
     """
     # Matches: optional backtick + word + optional backtick + whitespace + (TYPE)
     # TYPE may contain nested parens: DECIMAL(18,2)
-    pattern = re.compile(r'`?(\w+)`?\s*\(([^()]*(?:\([^()]*\)[^()]*)*)\)')
+    pattern = re.compile(r"`?(\w+)`?\s*\(([^()]*(?:\([^()]*\)[^()]*)*)\)")
     results = []
     seen = set()
     for text in bullets:
@@ -179,13 +189,14 @@ def parse_output_schema_cols(bullets):
         if m:
             name = m.group(1).strip()
             type_spec = m.group(2).strip()
-            if name and name not in seen and not name.startswith('_'):
+            if name and name not in seen and not name.startswith("_"):
                 results.append({"name": name, "type": type_spec})
                 seen.add(name)
     return results
 
 
 # ── Column mapping ────────────────────────────────────────────────────────────
+
 
 def map_output_columns(requested_cols, tables_schemas):
     """
@@ -210,7 +221,8 @@ def map_output_columns(requested_cols, tables_schemas):
         for tname, fields in tables_schemas.items()
         for f in fields
         if any(t in f["type"].lower() for t in ("int", "float", "double", "decimal", "long"))
-        and not f["name"].endswith("_id") and f["name"] != "id"
+        and not f["name"].endswith("_id")
+        and f["name"] != "id"
     }
 
     # Date/timestamp columns
@@ -221,12 +233,9 @@ def map_output_columns(requested_cols, tables_schemas):
         if any(t in f["type"].lower() for t in ("timestamp", "date32", "date64", "time"))
     }
 
-    all_col_names = sorted({
-        f["name"]
-        for fields in tables_schemas.values()
-        for f in fields
-        if not f["name"].startswith("_")
-    })
+    all_col_names = sorted(
+        {f["name"] for fields in tables_schemas.values() for f in fields if not f["name"].startswith("_")}
+    )
 
     results = []
 
@@ -236,24 +245,28 @@ def map_output_columns(requested_cols, tables_schemas):
         # 1. Direct exact match
         if name in col_index:
             found = col_index[name]
-            results.append({
-                "name": name,
-                "requested_type": rc["type"],
-                "status": "direct_multiple" if len(found) > 1 else "direct",
-                "found_in": found,
-                "suggestion": None,
-            })
+            results.append(
+                {
+                    "name": name,
+                    "requested_type": rc["type"],
+                    "status": "direct_multiple" if len(found) > 1 else "direct",
+                    "found_in": found,
+                    "suggestion": None,
+                }
+            )
             continue
 
         # 2. Boolean derived flag: is_X, has_X, flag_X
         if name.startswith(("is_", "has_", "flag_")):
-            results.append({
-                "name": name,
-                "requested_type": rc["type"],
-                "status": "derived_flag",
-                "found_in": [],
-                "suggestion": f"Describe the condition, e.g. `{name} = <column> > <threshold>`",
-            })
+            results.append(
+                {
+                    "name": name,
+                    "requested_type": rc["type"],
+                    "status": "derived_flag",
+                    "found_in": [],
+                    "suggestion": f"Describe the condition, e.g. `{name} = <column> > <threshold>`",
+                }
+            )
             continue
 
         # 3. Aggregation pattern matching
@@ -276,8 +289,7 @@ def map_output_columns(requested_cols, tables_schemas):
                 break
 
             # Fuzzy: base is substring of a numeric col name
-            fuzzy = [(c, t, tp) for c, (t, tp) in numeric_cols.items()
-                     if base in c or c in base]
+            fuzzy = [(c, t, tp) for c, (t, tp) in numeric_cols.items() if base in c or c in base]
             if fuzzy:
                 c, t, tp = fuzzy[0]
                 agg_found = {"func": func, "col": c, "table": t, "type": tp}
@@ -288,44 +300,51 @@ def map_output_columns(requested_cols, tables_schemas):
                 suggestion = f"COUNT(*) as `{name}`"
             else:
                 suggestion = f"{agg_found['func']}({agg_found['table']}.{agg_found['col']}) as `{name}`"
-            results.append({
-                "name": name,
-                "requested_type": rc["type"],
-                "status": "aggregation_candidate",
-                "found_in": [(agg_found["table"], agg_found["type"])] if agg_found["col"] != "*" else [],
-                "agg_match": agg_found,
-                "suggestion": suggestion,
-            })
+            results.append(
+                {
+                    "name": name,
+                    "requested_type": rc["type"],
+                    "status": "aggregation_candidate",
+                    "found_in": [(agg_found["table"], agg_found["type"])] if agg_found["col"] != "*" else [],
+                    "agg_match": agg_found,
+                    "suggestion": suggestion,
+                }
+            )
             continue
 
         # 4. Date/timestamp pattern (last_X_at, updated_at, etc.)
         if any(k in name for k in ("_at", "_time", "timestamp", "_date", "last_", "latest_")):
             if date_cols:
                 best_col, (best_t, best_tp) = list(date_cols.items())[0]
-                results.append({
-                    "name": name,
-                    "requested_type": rc["type"],
-                    "status": "aggregation_candidate",
-                    "found_in": [(best_t, best_tp)],
-                    "agg_match": {"func": "MAX", "col": best_col, "table": best_t, "type": best_tp},
-                    "suggestion": f"MAX({best_t}.{best_col}) as `{name}`",
-                })
+                results.append(
+                    {
+                        "name": name,
+                        "requested_type": rc["type"],
+                        "status": "aggregation_candidate",
+                        "found_in": [(best_t, best_tp)],
+                        "agg_match": {"func": "MAX", "col": best_col, "table": best_t, "type": best_tp},
+                        "suggestion": f"MAX({best_t}.{best_col}) as `{name}`",
+                    }
+                )
                 continue
 
         # 5. Not found
-        results.append({
-            "name": name,
-            "requested_type": rc["type"],
-            "status": "not_found",
-            "found_in": [],
-            "suggestion": None,
-            "available_cols": all_col_names[:12],
-        })
+        results.append(
+            {
+                "name": name,
+                "requested_type": rc["type"],
+                "status": "not_found",
+                "found_in": [],
+                "suggestion": None,
+                "available_cols": all_col_names[:12],
+            }
+        )
 
     return results
 
 
 # ── Agent question generation ─────────────────────────────────────────────────
+
 
 def generate_agent_questions(col_mapping, tables_schemas, cross_hint):
     """
@@ -351,19 +370,22 @@ def generate_agent_questions(col_mapping, tables_schemas, cross_hint):
         key = cross_hint.get("suggested_join_key", "key_col")
         join_snippet = (
             f"Joins:\n  - {tbls[0]} → {tbls[1]} (on {key})"
-            if len(tbls) >= 2 else "Add a Joins: section to requirements"
+            if len(tbls) >= 2
+            else "Add a Joins: section to requirements"
         )
-        questions.append({
-            "id": f"aq_{qid}",
-            "type": "join_required",
-            "column": None,
-            "icon": "🔗",
-            "title": "Join required between selected tables",
-            "message": cross_hint["question"],
-            "context": f"Available tables — {table_ctx}",
-            "suggestion": join_snippet,
-            "auto_approvable": False,
-        })
+        questions.append(
+            {
+                "id": f"aq_{qid}",
+                "type": "join_required",
+                "column": None,
+                "icon": "🔗",
+                "title": "Join required between selected tables",
+                "message": cross_hint["question"],
+                "context": f"Available tables — {table_ctx}",
+                "suggestion": join_snippet,
+                "auto_approvable": False,
+            }
+        )
         qid += 1
 
     for m in col_mapping:
@@ -373,91 +395,102 @@ def generate_agent_questions(col_mapping, tables_schemas, cross_hint):
         # ── Q: Column not found anywhere ──────────────────────────────────────
         if status == "not_found":
             avail = m.get("available_cols", [])
-            questions.append({
-                "id": f"aq_{qid}",
-                "type": "column_not_found",
-                "column": name,
-                "icon": "❓",
-                "title": f"`{name}` not found in any selected Silver table",
-                "message": (
-                    f"Your Output Schema requests **`{name}`** (`{m['requested_type']}`), "
-                    f"but this column does not exist in the selected Silver tables."
-                ),
-                "context": f"Selected tables — {table_ctx}",
-                "suggestion": (
-                    f"Did you mean one of: {', '.join(f'`{c}`' for c in avail[:6])}?\n"
-                    "Or do you need to select an additional Silver table that contains this column?"
-                ) if avail else "Select an additional Silver table that contains this column.",
-                "auto_approvable": False,
-            })
+            questions.append(
+                {
+                    "id": f"aq_{qid}",
+                    "type": "column_not_found",
+                    "column": name,
+                    "icon": "❓",
+                    "title": f"`{name}` not found in any selected Silver table",
+                    "message": (
+                        f"Your Output Schema requests **`{name}`** (`{m['requested_type']}`), "
+                        f"but this column does not exist in the selected Silver tables."
+                    ),
+                    "context": f"Selected tables — {table_ctx}",
+                    "suggestion": (
+                        (
+                            f"Did you mean one of: {', '.join(f'`{c}`' for c in avail[:6])}?\n"
+                            "Or do you need to select an additional Silver table that contains this column?"
+                        )
+                        if avail
+                        else "Select an additional Silver table that contains this column."
+                    ),
+                    "auto_approvable": False,
+                }
+            )
             qid += 1
 
         # ── Q: Derived boolean flag needs condition ───────────────────────────
         elif status == "derived_flag":
-            questions.append({
-                "id": f"aq_{qid}",
-                "type": "derived_flag",
-                "column": name,
-                "icon": "🏷️",
-                "title": f"`{name}` — derived boolean flag",
-                "message": (
-                    f"**`{name}`** (`{m['requested_type']}`) looks like a computed boolean. "
-                    "What is the condition that makes it TRUE?"
-                ),
-                "context": (
-                    "Derived flags are computed after aggregation using an expression like "
-                    "`total_spend > 300` or `total_transactions_count >= 5`."
-                ),
-                "suggestion": f"Business rules:\n  - {name} = <your condition here>",
-                "auto_approvable": False,
-            })
+            questions.append(
+                {
+                    "id": f"aq_{qid}",
+                    "type": "derived_flag",
+                    "column": name,
+                    "icon": "🏷️",
+                    "title": f"`{name}` — derived boolean flag",
+                    "message": (
+                        f"**`{name}`** (`{m['requested_type']}`) looks like a computed boolean. "
+                        "What is the condition that makes it TRUE?"
+                    ),
+                    "context": (
+                        "Derived flags are computed after aggregation using an expression like "
+                        "`total_spend > 300` or `total_transactions_count >= 5`."
+                    ),
+                    "suggestion": f"Business rules:\n  - {name} = <your condition here>",
+                    "auto_approvable": False,
+                }
+            )
             qid += 1
 
         # ── Info: Aggregation auto-resolved (non-blocking) ────────────────────
         elif status == "aggregation_candidate":
-            questions.append({
-                "id": f"aq_{qid}",
-                "type": "aggregation_confirm",
-                "column": name,
-                "icon": "✅",
-                "title": f"`{name}` — aggregation auto-detected",
-                "message": (
-                    f"**`{name}`** (`{m['requested_type']}`): mapped to **`{m['suggestion']}`**"
-                ),
-                "context": (
-                    f"Column `{m['agg_match']['col']}` ({m['agg_match']['type']}) "
-                    f"found in `{m['agg_match']['table']}`."
-                    if m.get("agg_match", {}).get("col") != "*"
-                    else "COUNT(*) over all rows in the joined/filtered result."
-                ),
-                "suggestion": None,
-                "auto_approvable": True,
-            })
+            questions.append(
+                {
+                    "id": f"aq_{qid}",
+                    "type": "aggregation_confirm",
+                    "column": name,
+                    "icon": "✅",
+                    "title": f"`{name}` — aggregation auto-detected",
+                    "message": (f"**`{name}`** (`{m['requested_type']}`): mapped to **`{m['suggestion']}`**"),
+                    "context": (
+                        f"Column `{m['agg_match']['col']}` ({m['agg_match']['type']}) "
+                        f"found in `{m['agg_match']['table']}`."
+                        if m.get("agg_match", {}).get("col") != "*"
+                        else "COUNT(*) over all rows in the joined/filtered result."
+                    ),
+                    "suggestion": None,
+                    "auto_approvable": True,
+                }
+            )
             qid += 1
 
         # ── Info: Ambiguous column in multiple tables (usually join key) ──────
         elif status == "direct_multiple":
             found_tables = [t for t, _ in m.get("found_in", [])]
-            questions.append({
-                "id": f"aq_{qid}",
-                "type": "ambiguous_column",
-                "column": name,
-                "icon": "ℹ️",
-                "title": f"`{name}` — join key (found in multiple tables)",
-                "message": (
-                    f"**`{name}`** exists in: {', '.join(f'`{t}`' for t in found_tables)}. "
-                    "It will be used as the join key and as a dimension column."
-                ),
-                "context": "No action needed — this is expected for join keys.",
-                "suggestion": None,
-                "auto_approvable": True,
-            })
+            questions.append(
+                {
+                    "id": f"aq_{qid}",
+                    "type": "ambiguous_column",
+                    "column": name,
+                    "icon": "ℹ️",
+                    "title": f"`{name}` — join key (found in multiple tables)",
+                    "message": (
+                        f"**`{name}`** exists in: {', '.join(f'`{t}`' for t in found_tables)}. "
+                        "It will be used as the join key and as a dimension column."
+                    ),
+                    "context": "No action needed — this is expected for join keys.",
+                    "suggestion": None,
+                    "auto_approvable": True,
+                }
+            )
             qid += 1
 
     return questions
 
 
 # ── Plan builders ─────────────────────────────────────────────────────────────
+
 
 def build_cross_table_plan(tables_schemas, req_hints, col_mapping, cross_hint):
     """
@@ -471,24 +504,26 @@ def build_cross_table_plan(tables_schemas, req_hints, col_mapping, cross_hint):
     # Resolve join from requirements spec if more specific
     req_join_key = join_key
     for raw in req_hints.get("joins", []):
-        m = re.search(r'\(on\s+(\w+)\)', raw, re.IGNORECASE)
+        m = re.search(r"\(on\s+(\w+)\)", raw, re.IGNORECASE)
         if m:
             req_join_key = m.group(1)
             break
 
-    dest_name = dest_hints[0].strip() if dest_hints else (
-        "_".join(t.replace("_silver", "") for t in tables) + "_gold"
-    )
+    dest_name = dest_hints[0].strip() if dest_hints else ("_".join(t.replace("_silver", "") for t in tables) + "_gold")
 
     joins = []
     if req_hints.get("joins"):
         for raw in req_hints["joins"]:
-            m = re.match(r'(\w+)\s*[→>-]+\s*(\w+)\s*(?:\(on\s+(\w+)\))?', raw, re.IGNORECASE)
+            m = re.match(r"(\w+)\s*[→>-]+\s*(\w+)\s*(?:\(on\s+(\w+)\))?", raw, re.IGNORECASE)
             if m:
-                joins.append({
-                    "fact": m.group(1), "dim": m.group(2),
-                    "on": m.group(3) or req_join_key, "type": "left",
-                })
+                joins.append(
+                    {
+                        "fact": m.group(1),
+                        "dim": m.group(2),
+                        "on": m.group(3) or req_join_key,
+                        "type": "left",
+                    }
+                )
     elif len(tables) >= 2:
         joins.append({"fact": tables[0], "dim": tables[1], "on": req_join_key, "type": "left"})
 
@@ -505,24 +540,30 @@ def build_cross_table_plan(tables_schemas, req_hints, col_mapping, cross_hint):
             group_by.append(name)
             found_type = m["found_in"][0][1] if m.get("found_in") else "string"
             source_table = m["found_in"][0][0] if m.get("found_in") else ""
-            output_schema.append({
-                "column": name,
-                "type": found_type,
-                "source": f"{source_table}.{name}",
-            })
+            output_schema.append(
+                {
+                    "column": name,
+                    "type": found_type,
+                    "source": f"{source_table}.{name}",
+                }
+            )
 
         elif status == "aggregation_candidate":
             agg = m.get("agg_match", {})
-            aggregations.append({
-                "func": agg.get("func", "COUNT"),
-                "col": agg.get("col", "*"),
-                "alias": name,
-            })
-            output_schema.append({
-                "column": name,
-                "type": agg.get("type", "double"),
-                "source": m.get("suggestion", ""),
-            })
+            aggregations.append(
+                {
+                    "func": agg.get("func", "COUNT"),
+                    "col": agg.get("col", "*"),
+                    "alias": name,
+                }
+            )
+            output_schema.append(
+                {
+                    "column": name,
+                    "type": agg.get("type", "double"),
+                    "source": m.get("suggestion", ""),
+                }
+            )
 
         elif status == "derived_flag":
             # Derived column — included in output schema, not in aggregations
@@ -532,11 +573,13 @@ def build_cross_table_plan(tables_schemas, req_hints, col_mapping, cross_hint):
                 if name in rule.lower():
                     rule_val = rule
                     break
-            output_schema.append({
-                "column": name,
-                "type": "boolean",
-                "source": f"derived: {rule_val}" if rule_val else "derived (post-aggregation)",
-            })
+            output_schema.append(
+                {
+                    "column": name,
+                    "type": "boolean",
+                    "source": f"derived: {rule_val}" if rule_val else "derived (post-aggregation)",
+                }
+            )
 
     if not aggregations:
         aggregations = [{"func": "COUNT", "col": "*", "alias": "record_count"}]
@@ -597,14 +640,9 @@ def build_plan(table_name, fields, req_hints):
     if not group_by:
         if id_cols:
             group_by = id_cols[:1]
-            warnings.append(
-                f"No dimension/date columns found in `{table_name}` — grouping by `{id_cols[0]}`."
-            )
+            warnings.append(f"No dimension/date columns found in `{table_name}` — grouping by `{id_cols[0]}`.")
         else:
-            questions.append(
-                f"`{table_name}`: Cannot determine group-by columns. "
-                "Add a Dimensions hint."
-            )
+            questions.append(f"`{table_name}`: Cannot determine group-by columns. " "Add a Dimensions hint.")
 
     # ── Resolve aggregations ──────────────────────────────────────────────────
     req_measures = req_hints.get("measures", [])
@@ -638,9 +676,7 @@ def build_plan(table_name, fields, req_hints):
             aggregations.append({"func": "SUM", "col": col, "alias": f"total_{col}"})
             aggregations.append({"func": "AVG", "col": col, "alias": f"avg_{col}"})
         if not measure_cols:
-            warnings.append(
-                f"`{table_name}`: No numeric columns found — only record count aggregated."
-            )
+            warnings.append(f"`{table_name}`: No numeric columns found — only record count aggregated.")
 
     # ── Destination ───────────────────────────────────────────────────────────
     req_dest = req_hints.get("destination", [])
@@ -649,9 +685,7 @@ def build_plan(table_name, fields, req_hints):
 
     # ── Grain ─────────────────────────────────────────────────────────────────
     req_grain = req_hints.get("grain", [])
-    grain = req_grain[0] if req_grain else (
-        f"one row per ({', '.join(group_by)})" if group_by else "undetermined"
-    )
+    grain = req_grain[0] if req_grain else (f"one row per ({', '.join(group_by)})" if group_by else "undetermined")
 
     # ── Joins ─────────────────────────────────────────────────────────────────
     joins = []
@@ -663,16 +697,22 @@ def build_plan(table_name, fields, req_hints):
     # ── Output schema ─────────────────────────────────────────────────────────
     output_schema = []
     for col in group_by:
-        output_schema.append({
-            "column": col, "type": type_map.get(col, "string"),
-            "source": f"{table_name}.{col}",
-        })
+        output_schema.append(
+            {
+                "column": col,
+                "type": type_map.get(col, "string"),
+                "source": f"{table_name}.{col}",
+            }
+        )
     for agg in aggregations:
         t = "int64" if agg["col"] == "*" else type_map.get(agg["col"], "double")
-        output_schema.append({
-            "column": agg["alias"], "type": t,
-            "source": f"{agg['func']}({agg['col']})",
-        })
+        output_schema.append(
+            {
+                "column": agg["alias"],
+                "type": t,
+                "source": f"{agg['func']}({agg['col']})",
+            }
+        )
 
     return {
         "source_silver": table_name,
@@ -690,6 +730,7 @@ def build_plan(table_name, fields, req_hints):
 
 # ── Cross-table join detection ────────────────────────────────────────────────
 
+
 def detect_cross_table_join(tables_schemas, req_hints):
     """
     Returns a hint dict when multiple Silver tables likely need to be joined.
@@ -706,10 +747,9 @@ def detect_cross_table_join(tables_schemas, req_hints):
         for f in fields:
             col_table_count[f["name"]] += 1
 
-    common_id_cols = sorted([
-        col for col, cnt in col_table_count.items()
-        if cnt >= 2 and (col.endswith("_id") or col == "id")
-    ])
+    common_id_cols = sorted(
+        [col for col, cnt in col_table_count.items() if cnt >= 2 and (col.endswith("_id") or col == "id")]
+    )
 
     dest_hints = req_hints.get("destination", [])
     join_hints = req_hints.get("joins", [])
@@ -728,16 +768,18 @@ def detect_cross_table_join(tables_schemas, req_hints):
     if join_confirmed:
         question = (
             f"Join detected. Tables `{'`, `'.join(table_names)}` will be joined"
-            + (f" on `{preferred_key}`" if preferred_key else "") + "."
+            + (f" on `{preferred_key}`" if preferred_key else "")
+            + "."
         )
     else:
-        join_example = (
-            f"Joins:\n  - {table_names[0]} → {table_names[1]} "
-            f"(on {preferred_key or 'key_column'})"
-        )
+        join_example = f"Joins:\n  - {table_names[0]} → {table_names[1]} " f"(on {preferred_key or 'key_column'})"
         question = (
             f"Multiple Silver tables selected (`{'`, `'.join(table_names)}`). "
-            + (f"Common join key detected: `{preferred_key}`. " if preferred_key else "No common join key auto-detected. ")
+            + (
+                f"Common join key detected: `{preferred_key}`. "
+                if preferred_key
+                else "No common join key auto-detected. "
+            )
             + "**Should these be joined into a single Gold table?**"
             + f"\n\nIf yes, add to Business Requirements:\n```\n{join_example}\n```"
         )
@@ -753,6 +795,7 @@ def detect_cross_table_join(tables_schemas, req_hints):
 
 
 # ── Entry point ───────────────────────────────────────────────────────────────
+
 
 def main():
     parser = argparse.ArgumentParser(description="Analyse Silver schemas and generate a Gold plan")
@@ -810,9 +853,7 @@ def main():
     col_mapping = []
     if parsed_output_cols and tables_schemas:
         col_mapping = map_output_columns(parsed_output_cols, tables_schemas)
-        plan["agent_questions"] = generate_agent_questions(
-            col_mapping, tables_schemas, plan.get("cross_table_hint")
-        )
+        plan["agent_questions"] = generate_agent_questions(col_mapping, tables_schemas, plan.get("cross_table_hint"))
 
     # ── Plan generation ───────────────────────────────────────────────────────
     cross_hint = plan.get("cross_table_hint") or {}

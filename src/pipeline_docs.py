@@ -4,16 +4,19 @@ Saved to pipelines/<pipeline_name>.md at the project root.
 
 Uses pyarrow for schema reads — no Spark startup required.
 """
+
 from pathlib import Path
 
 try:
     import pyarrow.parquet as pq
+
     _HAS_PYARROW = True
 except ImportError:
     _HAS_PYARROW = False
 
 
 # ── Schema helpers ─────────────────────────────────────────────────────────────
+
 
 def _read_parquet_meta(directory):
     """Return (columns, row_count) for the first Parquet file found in `directory`."""
@@ -25,9 +28,7 @@ def _read_parquet_meta(directory):
     try:
         schema = pq.read_schema(str(parts[0]))
         pf = pq.ParquetFile(str(parts[0]))
-        columns = [
-            (schema.names[i], str(schema.types[i])) for i in range(len(schema.names))
-        ]
+        columns = [(schema.names[i], str(schema.types[i])) for i in range(len(schema.names))]
         return columns, pf.metadata.num_rows
     except Exception as exc:
         return [], f"error: {exc}"
@@ -56,8 +57,7 @@ def _schedule_summary(schedule_config):
         day = schedule_config.get("day", "Monday")
         t = schedule_config.get("time", "08:00")
         h, m = t.split(":")
-        days = ["Monday", "Tuesday", "Wednesday",
-                "Thursday", "Friday", "Saturday", "Sunday"]
+        days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
         dn = days.index(day) if day in days else 0
         return f"Weekly on {day} at {t}  `{m} {h} * * {dn}`"
     if stype == "Custom Cron":
@@ -71,6 +71,7 @@ def _safe_filename(name):
 
 
 # ── Document generators ────────────────────────────────────────────────────────
+
 
 def bronze_silver_doc(
     pipeline_name,
@@ -89,7 +90,7 @@ def bronze_silver_doc(
     lines = [
         f"# Pipeline: {pipeline_name}",
         "",
-        f"**Type:** Bronze & Silver  ",
+        "**Type:** Bronze & Silver  ",
         f"**Last run:** {run_ts}  ",
         f"**Last run status:** {status_badge}  ",
         f"**Schedule:** {_schedule_summary(schedule_config)}  ",
@@ -183,9 +184,7 @@ def bronze_silver_doc(
     ]
     for bn in bronze_names:
         sn = f"{bn[:-7]}_silver" if bn.endswith("_bronze") else f"{bn}_silver"
-        lines.append(
-            f"Source  →  data/bronze/{bn}/  →  data/silver/{sn}/"
-        )
+        lines.append(f"Source  →  data/bronze/{bn}/  →  data/silver/{sn}/")
     lines += [
         "```",
         "",
@@ -214,7 +213,7 @@ def gold_doc(
     lines = [
         f"# Pipeline: {pipeline_name}",
         "",
-        f"**Type:** Gold  ",
+        "**Type:** Gold  ",
         f"**Last run:** {run_ts}  ",
         f"**Last run status:** {status_badge}  ",
         f"**Schedule:** {_schedule_summary(schedule_config)}  ",
@@ -265,11 +264,7 @@ def gold_doc(
         if tp:
             lines.append(f"**Grain:** {tp.get('grain', '—')}  ")
             if tp.get("group_by"):
-                lines.append(
-                    "**Group by:** "
-                    + ", ".join(f"`{c}`" for c in tp["group_by"])
-                    + "  "
-                )
+                lines.append("**Group by:** " + ", ".join(f"`{c}`" for c in tp["group_by"]) + "  ")
             if tp.get("filters"):
                 lines.append("**Business rules applied:**  ")
                 for r in tp["filters"]:
@@ -277,9 +272,7 @@ def gold_doc(
             if tp.get("joins"):
                 lines.append("**Joins:**  ")
                 for j in tp["joins"]:
-                    lines.append(
-                        f"- `{j['fact']}` LEFT JOIN `{j['dim']}` ON `{j['on']}`"
-                    )
+                    lines.append(f"- `{j['fact']}` LEFT JOIN `{j['dim']}` ON `{j['on']}`")
 
         lines.append("")
 
@@ -289,9 +282,7 @@ def gold_doc(
             lines.append("| Function | Input Column | Output Column |")
             lines.append("|---|---|---|")
             for agg in tp["aggregations"]:
-                lines.append(
-                    f"| `{agg['func']}` | `{agg['col']}` | `{agg['alias']}` |"
-                )
+                lines.append(f"| `{agg['func']}` | `{agg['col']}` | `{agg['alias']}` |")
             lines.append("")
 
         lines.append("**Output schema:**")
@@ -308,9 +299,7 @@ def gold_doc(
     ]
     for st_name in silver_tables:
         base = st_name[:-7] if st_name.endswith("_silver") else st_name
-        lines.append(
-            f"data/silver/{st_name}/  →  data/gold/{base}_summary/"
-        )
+        lines.append(f"data/silver/{st_name}/  →  data/gold/{base}_summary/")
     lines += [
         "```",
         "",
@@ -348,7 +337,7 @@ def agent_gold_doc(
     lines = [
         f"# Pipeline: {pipeline_name}",
         "",
-        f"**Type:** Gold (Agent-designed)  ",
+        "**Type:** Gold (Agent-designed)  ",
         f"**Last run:** {run_ts}  ",
         f"**Last run status:** {status_badge}  ",
         f"**Schedule:** {_schedule_summary(schedule_config)}  ",
@@ -422,6 +411,7 @@ def agent_gold_doc(
 
 
 # ── Save ───────────────────────────────────────────────────────────────────────
+
 
 def save_pipeline_doc(project_root, pipeline_name, content):
     """Write content to pipelines/<pipeline_name>.md. Returns the file path."""

@@ -4,6 +4,7 @@ Gold Agent — Claude API-powered conversational pipeline architect.
 Gathers all information needed to build a Gold aggregation table from a
 user-provided target schema, then calls finalize_plan when ready.
 """
+
 import json
 import os
 from pathlib import Path
@@ -12,8 +13,8 @@ import anthropic
 
 
 class GoldAgent:
-    MODEL = "claude-haiku-4-5-20251001"        # used for planning chat
-    CODE_MODEL = "claude-sonnet-4-6"            # used for PySpark code generation
+    MODEL = "claude-haiku-4-5-20251001"  # used for planning chat
+    CODE_MODEL = "claude-sonnet-4-6"  # used for PySpark code generation
 
     SYSTEM_PROMPT = """You are a Gold layer pipeline architect for a Medallion Architecture \
 (Bronze → Silver → Gold) data pipeline.
@@ -204,9 +205,7 @@ This is WRONG. If you have all the info, call finalize_plan NOW in the same resp
     def __init__(self, silver_path: str, gold_path: str, api_key: str | None = None):
         self.silver_path = Path(silver_path)
         self.gold_path = Path(gold_path)
-        self.client = anthropic.Anthropic(
-            api_key=api_key or os.environ.get("ANTHROPIC_API_KEY")
-        )
+        self.client = anthropic.Anthropic(api_key=api_key or os.environ.get("ANTHROPIC_API_KEY"))
         self.history: list[dict] = []
         self.final_plan: dict | None = None
 
@@ -254,11 +253,7 @@ This is WRONG. If you have all the info, call finalize_plan NOW in the same resp
     def _tool_read_silver_schema(self, table_name: str) -> dict:
         table_dir = self.silver_path / table_name
         if not table_dir.exists():
-            available = (
-                [d.name for d in self.silver_path.iterdir() if d.is_dir()]
-                if self.silver_path.exists()
-                else []
-            )
+            available = [d.name for d in self.silver_path.iterdir() if d.is_dir()] if self.silver_path.exists() else []
             return {"error": f"Table '{table_name}' not found.", "available": available}
         try:
             import pyarrow.parquet as pq
@@ -327,9 +322,7 @@ This is WRONG. If you have all the info, call finalize_plan NOW in the same resp
             )
 
             if response.stop_reason == "end_turn":
-                text = "".join(
-                    b.text for b in response.content if hasattr(b, "text")
-                )
+                text = "".join(b.text for b in response.content if hasattr(b, "text"))
                 self.history.append({"role": "assistant", "content": response.content})
                 if text:
                     events.append({"type": "text", "content": text})

@@ -6,10 +6,15 @@ def test_connection(source_type, host, port, database, username, password):
     try:
         if source_type == "postgresql":
             import psycopg2
+
             conn = psycopg2.connect(
-                host=host, port=port, dbname=database,
-                user=username or getpass.getuser(), password=password,
-                connect_timeout=5, gssencmode='disable',
+                host=host,
+                port=port,
+                dbname=database,
+                user=username or getpass.getuser(),
+                password=password,
+                connect_timeout=5,
+                gssencmode="disable",
             )
             conn.close()
             return True, ""
@@ -31,19 +36,23 @@ def validate_tables(source_type, host, port, database, username, password, table
     try:
         if source_type == "postgresql":
             import psycopg2
+
             conn = psycopg2.connect(
-                host=host, port=port, dbname=database,
-                user=username or getpass.getuser(), password=password,
-                connect_timeout=5, gssencmode='disable',
+                host=host,
+                port=port,
+                dbname=database,
+                user=username or getpass.getuser(),
+                password=password,
+                connect_timeout=5,
+                gssencmode="disable",
             )
             cur = conn.cursor()
             for table in table_names:
                 parts = table.split(".", 1)
                 schema, tname = (parts[0].strip(), parts[1].strip()) if len(parts) == 2 else ("public", table.strip())
                 cur.execute(
-                    "SELECT 1 FROM information_schema.tables "
-                    "WHERE table_schema = %s AND table_name = %s",
-                    (schema, tname)
+                    "SELECT 1 FROM information_schema.tables " "WHERE table_schema = %s AND table_name = %s",
+                    (schema, tname),
                 )
                 results[table] = cur.fetchone() is not None
             cur.close()

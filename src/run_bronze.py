@@ -1,36 +1,37 @@
 import argparse
-import os
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from dotenv import load_dotenv
-from pyspark.sql import SparkSession
+from dotenv import load_dotenv  # noqa: E402
+from pyspark.sql import SparkSession  # noqa: E402
 
 load_dotenv()
 
-from bronze.ingestion import BronzeLayer
-from config.config_manager import ConfigManager
-from utils.logger import PipelineLogger
+from bronze.ingestion import BronzeLayer  # noqa: E402
+from config.config_manager import ConfigManager  # noqa: E402
+from utils.logger import PipelineLogger  # noqa: E402
 
 
 def main():
     parser = argparse.ArgumentParser(description="Run Bronze ingestion for specific tables")
-    parser.add_argument("--source", required=True, choices=["postgresql", "file"],
-                        help="Source type")
-    parser.add_argument("--tables", required=True,
-                        help="Comma-separated table names (PostgreSQL: schema.table | File: filename.ext)")
-    parser.add_argument("--mode", default="full", choices=["full", "incremental"],
-                        help="Load mode: full (overwrite) or incremental (append, schema-evolving)")
-    parser.add_argument("--watermark-col", default=None,
-                        help="Column for incremental watermark (PostgreSQL only, optional)")
-    parser.add_argument("--pg-host", default=None,
-                        help="Override PostgreSQL host for this run")
-    parser.add_argument("--pg-port", default=None, type=int,
-                        help="Override PostgreSQL port for this run")
-    parser.add_argument("--pg-database", default=None,
-                        help="Override PostgreSQL database for this run")
+    parser.add_argument("--source", required=True, choices=["postgresql", "file"], help="Source type")
+    parser.add_argument(
+        "--tables", required=True, help="Comma-separated table names (PostgreSQL: schema.table | File: filename.ext)"
+    )
+    parser.add_argument(
+        "--mode",
+        default="full",
+        choices=["full", "incremental"],
+        help="Load mode: full (overwrite) or incremental (append, schema-evolving)",
+    )
+    parser.add_argument(
+        "--watermark-col", default=None, help="Column for incremental watermark (PostgreSQL only, optional)"
+    )
+    parser.add_argument("--pg-host", default=None, help="Override PostgreSQL host for this run")
+    parser.add_argument("--pg-port", default=None, type=int, help="Override PostgreSQL port for this run")
+    parser.add_argument("--pg-database", default=None, help="Override PostgreSQL database for this run")
     args = parser.parse_args()
 
     tables = [t.strip() for t in args.tables.split(",") if t.strip()]
@@ -65,7 +66,8 @@ def main():
         if args.source == "postgresql":
             bronze_name = f"{table.split('.')[-1]}_bronze"
             ok = bronze.ingest_from_postgresql(
-                table, bronze_name,
+                table,
+                bronze_name,
                 mode=args.mode,
                 watermark_col=args.watermark_col,
                 host=args.pg_host,
